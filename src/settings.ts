@@ -1,38 +1,55 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
-import MyPlugin from './main';
+import {
+	DEFAULT_NOTE_TEMPLATE,
+	DEFAULT_PAT_SECRET_NAME,
+	MAX_SYNC_INTERVAL_HOURS,
+	MIN_SYNC_INTERVAL_HOURS,
+} from './constants';
 
-export interface MyPluginSettings {
-	mySetting: string;
+export interface GithubStarsSyncSettings {
+	patSecretName: string;
+	notesFolder: string;
+	filenameTemplate: string;
+	noteTemplate: string;
+	autoSync: boolean;
+	syncIntervalHours: number;
+	updateExistingNotes: boolean;
 }
 
-export const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default',
+export const DEFAULT_SETTINGS: GithubStarsSyncSettings = {
+	patSecretName: DEFAULT_PAT_SECRET_NAME,
+	notesFolder: 'GitHub Stars',
+	filenameTemplate: '{{owner}}-{{name}}',
+	noteTemplate: DEFAULT_NOTE_TEMPLATE,
+	autoSync: true,
+	syncIntervalHours: 24,
+	updateExistingNotes: false,
 };
 
-export class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
+export function normalizeSyncIntervalHours(hours: number): number {
+	if (!Number.isFinite(hours)) {
+		return DEFAULT_SETTINGS.syncIntervalHours;
 	}
 
-	display(): void {
-		const { containerEl } = this;
+	return Math.min(
+		MAX_SYNC_INTERVAL_HOURS,
+		Math.max(MIN_SYNC_INTERVAL_HOURS, Math.round(hours)),
+	);
+}
 
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Settings #1')
-			.setDesc("It's a secret")
-			.addText((text) =>
-				text
-					.setPlaceholder('Enter your secret')
-					.setValue(this.plugin.settings.mySetting)
-					.onChange(async (value) => {
-						this.plugin.settings.mySetting = value;
-						await this.plugin.saveSettings();
-					}),
-			);
-	}
+export function normalizeSettings(
+	settings: Partial<GithubStarsSyncSettings>,
+): GithubStarsSyncSettings {
+	return {
+		...DEFAULT_SETTINGS,
+		...settings,
+		syncIntervalHours: normalizeSyncIntervalHours(
+			settings.syncIntervalHours ?? DEFAULT_SETTINGS.syncIntervalHours,
+		),
+		patSecretName:
+			settings.patSecretName?.trim() || DEFAULT_PAT_SECRET_NAME,
+		notesFolder: settings.notesFolder?.trim() || DEFAULT_SETTINGS.notesFolder,
+		filenameTemplate:
+			settings.filenameTemplate?.trim() || DEFAULT_SETTINGS.filenameTemplate,
+		noteTemplate: settings.noteTemplate ?? DEFAULT_SETTINGS.noteTemplate,
+	};
 }

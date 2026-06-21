@@ -1,92 +1,121 @@
-# Obsidian Sample Plugin
+# GitHub Stars Sync
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+Synchronize your GitHub starred repositories into Obsidian notes. Configure a personal access token (stored in Obsidian’s secure keychain), choose where notes are created, and customize the note template with repository metadata.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## Features
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
+- Fetches all repositories you have starred on GitHub
+- Creates one note per starred repository in a configurable vault folder
+- Custom filename and note templates with `{{variable}}` placeholders
+- Stores your GitHub personal access token in [Obsidian secret storage](https://docs.obsidian.md/plugins/guides/secret-storage) (not in `data.json`)
+- Automatic background sync on a configurable interval
+- Manual sync via command palette or ribbon icon
 
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and outputs a Notice on click.
-- Registers a global interval which logs 'setInterval' to the console.
+## Requirements
 
-## First time developing plugins?
+- Obsidian **1.11.4** or later (for secret storage)
+- Node.js 18+ (for development builds)
+- A GitHub personal access token with **`public_repo`** scope (or **`repo`** if you star private repositories)
 
-Quick starting guide for new plugin devs:
+## Build and install
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `src/main.ts` to `main.js`.
-- Make changes to `src/main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+### Development
 
-## Releasing new releases
-
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
-
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
-
-## Adding your plugin to the community plugin list
-
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
-
-## How to use
-
-- Clone this repo.
-- Make sure your NodeJS is at least v18 (`node --version`).
-- `npm i` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint
-
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-	"fundingUrl": "https://buymeacoffee.com"
-}
+```bash
+npm install
+npm run dev
 ```
 
-If you have multiple URLs, you can also do:
+Copy or symlink the plugin folder into your vault:
 
-```json
-{
-	"fundingUrl": {
-		"Buy Me a Coffee": "https://buymeacoffee.com",
-		"GitHub Sponsor": "https://github.com/sponsors",
-		"Patreon": "https://www.patreon.com/"
-	}
-}
+```text
+<Vault>/.obsidian/plugins/github-stars-sync/
 ```
 
-## API Documentation
+The folder must contain `main.js`, `manifest.json`, and optionally `styles.css`.
 
-See https://docs.obsidian.md
+Reload Obsidian and enable **GitHub Stars Sync** under **Settings → Community plugins**.
+
+### Production build
+
+```bash
+npm run build
+```
+
+### Tests
+
+```bash
+npm test
+```
+
+## Create a minimal GitHub personal access token
+
+1. Open GitHub → **Settings → Developer settings → Personal access tokens**.
+2. Create a **fine-grained** or **classic** token.
+3. Grant read access to your starred repositories:
+   - **Classic token:** enable the `public_repo` scope (use `repo` if you need private starred repos).
+   - **Fine-grained token:** allow read access to **Metadata** and repository contents you star.
+4. Copy the generated token.
+
+## Configure the plugin
+
+Open **Settings → Community plugins → GitHub Stars Sync**.
+
+### Personal access token
+
+Use the **Personal access token** secret selector to create or choose a secret in Obsidian’s keychain. Only the secret *name* is saved in plugin settings; the token value stays in secret storage.
+
+Click **Test connection** to verify the token works.
+
+### Note output
+
+| Setting | Description |
+| --- | --- |
+| **Notes folder** | Vault folder for synced notes (default: `GitHub Stars`) |
+| **Filename template** | Filename pattern without `.md` (default: `{{owner}}-{{name}}`) |
+| **Note template** | Full markdown template for each note |
+| **Update existing notes** | Re-render notes from the template on each sync (off by default to preserve manual edits) |
+
+### Synchronization
+
+| Setting | Description |
+| --- | --- |
+| **Automatic sync** | Fetch stars on a schedule |
+| **Sync interval (hours)** | Hours between automatic syncs (1–168) |
+| **Sync now** | Run a sync immediately |
+
+You can also run **Sync GitHub stars now** from the command palette or click the star ribbon icon.
+
+## Template variables
+
+Use these placeholders in the filename and note templates:
+
+| Variable | Description |
+| --- | --- |
+| `{{name}}` | Repository name |
+| `{{full_name}}` | `owner/repo` |
+| `{{owner}}` | Owner login |
+| `{{description}}` | Repository description |
+| `{{language}}` | Primary language |
+| `{{url}}` | GitHub URL |
+| `{{id}}` | Repository ID |
+| `{{stars}}` | Star count |
+| `{{forks}}` | Fork count |
+| `{{watchers}}` | Watcher count |
+| `{{issues}}` | Open issue count |
+| `{{created_at}}` | Created date (ISO 8601) |
+| `{{updated_at}}` | Updated date (ISO 8601) |
+| `{{pushed_at}}` | Last push date (ISO 8601) |
+| `{{starred_at}}` | When you starred the repo (ISO 8601) |
+| `{{is_private}}` | `true` or `false` |
+| `{{is_fork}}` | `true` or `false` |
+| `{{topics}}` | YAML list of topics |
+| `{{topics_inline}}` | Comma-separated topics |
+
+## Documentation
+
+Design notes and architecture details live in the [`docs/`](docs/) folder.
+
+## License
+
+0-BSD (see [LICENSE](LICENSE)).

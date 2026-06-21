@@ -1,114 +1,134 @@
+import { Notice, Plugin } from 'obsidian';
 import {
-	Editor,
-	MarkdownView,
-	MarkdownFileInfo,
-	Modal,
-	Notice,
-	Plugin,
-} from 'obsidian';
-import {
-	DEFAULT_SETTINGS,
-	MyPluginSettings,
-	SampleSettingTab,
+	normalizeSettings,
+	type GithubStarsSyncSettings,
 } from './settings';
+import { GithubStarsSyncSettingTab } from './ui/settingsTab';
+import {
+	formatSyncNotice,
+	syncGithubStars,
+} from './sync/syncService';
+import type { SyncState } from './types';
 
-// Remember to rename these classes and interfaces!
+const DEFAULT_SYNC_STATE: SyncState = {
+	lastSyncTime: null,
+	lastSyncError: null,
+	repoNotes: {},
+};
 
-export default class MyPlugin extends Plugin {
-	settings!: MyPluginSettings;
+export default class GithubStarsSyncPlugin extends Plugin {
+	settings!: GithubStarsSyncSettings;
+	syncState: SyncState = { ...DEFAULT_SYNC_STATE };
+	private syncInProgress = false;
 
 	async onload() {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (_evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+		this.addRibbonIcon('star', 'Sync GitHub stars', () => {
+			void this.runSync({ showNotice: true });
 		});
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
-
-		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
+			id: 'sync-github-stars',
+			name: 'Sync GitHub stars now',
 			callback: () => {
-				new SampleModal(this.app).open();
-			},
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (
-				editor: Editor,
-				_ctx: MarkdownView | MarkdownFileInfo,
-			) => {
-				editor.replaceSelection('Sample editor command');
-			},
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView =
-					this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-				return false;
+				void this.runSync({ showNotice: true });
 			},
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new GithubStarsSyncSettingTab(this.app, this));
+		this.refreshSyncInterval();
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(activeDocument, 'click', (_evt: MouseEvent) => {
-			new Notice('Click');
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(
-			window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000),
-		);
+		if (this.settings.autoSync) {
+			window.setTimeout(() => {
+				void this.runSync({ showNotice: false });
+			}, 5000);
+		}
 	}
 
-	onunload() {}
+	onunload() {
+		this.refreshSyncInterval(true);
+	}
 
 	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<MyPluginSettings>,
-		);
+		const loaded = (await this.loadData()) as
+			| Partial<GithubStarsSyncSettings & SyncState>
+			| null;
+
+		this.settings = normalizeSettings(loaded ?? {});
+		this.syncState = {
+			lastSyncTime: loaded?.lastSyncTime ?? null,
+			lastSyncError: loaded?.lastSyncError ?? null,
+			repoNotes: loaded?.repoNotes ?? {},
+		};
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-}
-
-class SampleModal extends Modal {
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.setText('Woah!');
+		await this.saveData({
+			...this.settings,
+			...this.syncState,
+		});
 	}
 
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
+	private activeSyncIntervalId: number | null = null;
+
+	private stopSyncInterval(): void {
+		if (this.activeSyncIntervalId !== null) {
+			window.clearInterval(this.activeSyncIntervalId);
+			this.activeSyncIntervalId = null;
+		}
+	}
+
+	refreshSyncInterval(clearOnly = false): void {
+		this.stopSyncInterval();
+
+		if (clearOnly || !this.settings.autoSync) {
+			return;
+		}
+
+		const intervalMs = this.settings.syncIntervalHours * 60 * 60 * 1000;
+		this.activeSyncIntervalId = window.setInterval(() => {
+			void this.runSync({ showNotice: false });
+		}, intervalMs);
+		this.registerInterval(this.activeSyncIntervalId);
+	}
+
+	async runSync(options: { showNotice: boolean }): Promise<void> {
+		if (this.syncInProgress) {
+			if (options.showNotice) {
+				new Notice('GitHub stars sync is already running.');
+			}
+			return;
+		}
+
+		this.syncInProgress = true;
+
+		try {
+			const outcome = await syncGithubStars(this.app, {
+				settings: this.settings,
+				syncState: this.syncState,
+			});
+
+			this.syncState = outcome.syncState;
+			await this.saveSettings();
+
+			if (options.showNotice) {
+				new Notice(formatSyncNotice(outcome.result), 8000);
+			}
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : 'Sync failed.';
+			this.syncState = {
+				...this.syncState,
+				lastSyncError: message,
+			};
+			await this.saveSettings();
+
+			if (options.showNotice) {
+				new Notice(message, 8000);
+			}
+		} finally {
+			this.syncInProgress = false;
+		}
 	}
 }

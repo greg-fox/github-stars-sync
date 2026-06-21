@@ -7,6 +7,9 @@ export default tseslint.config(
 	globalIgnores([
 		'node_modules',
 		'dist',
+		'coverage',
+		'tests',
+		'vitest.config.ts',
 		'esbuild.config.mjs',
 		'version-bump.mjs',
 		'versions.json',

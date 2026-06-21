@@ -1,8 +1,11 @@
-/*
+.github-stars-sync-template-input {
+	width: 100%;
+	min-height: 240px;
+	font-family: var(--font-monospace);
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
-*/
+.github-stars-sync-template-variables {
+	margin-top: 0.75rem;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}

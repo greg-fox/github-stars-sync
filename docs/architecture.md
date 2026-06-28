@@ -10,7 +10,10 @@ src/
   constants.ts            Defaults and template variable catalog
   types.ts                Shared interfaces
   github/
-    client.ts             GitHub API (starred repos, auth test)
+    client.ts             GitHub REST API (starred repos, auth test)
+    graphql.ts            Shared GraphQL request helper
+    starLists.ts          GraphQL star list membership lookup
+    enrichRepositories.ts Merge list metadata onto starred repos
     pagination.ts         Link header pagination helper
   template/
     engine.ts             Template rendering and filename sanitization
@@ -28,16 +31,18 @@ flowchart TD
   A[Trigger: interval / command / ribbon] --> B[Read PAT from secret storage]
   B --> C{Token present?}
   C -- No --> D[Show error notice]
-  C -- Yes --> E[Fetch starred repos from GitHub]
-  E --> F[Render templates per repository]
-  F --> G{Note exists?}
-  G -- No --> H[Create note]
-  G -- Yes --> I{Update existing enabled?}
-  I -- No --> J[Skip]
-  I -- Yes --> K[Modify note]
-  H --> L[Save sync state]
-  K --> L
-  J --> L
+  C -- Yes --> E[Fetch starred repos via REST]
+  E --> F[Fetch star list membership via GraphQL]
+  F --> G[Merge list metadata onto repos]
+  G --> H[Render templates per repository]
+  H --> I{Note exists?}
+  I -- No --> J[Create note]
+  I -- Yes --> K{Update existing enabled?}
+  K -- No --> L[Skip]
+  K -- Yes --> M[Modify note]
+  J --> N[Save sync state]
+  M --> N
+  L --> N
 ```
 
 ## Persisted data

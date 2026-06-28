@@ -1,5 +1,12 @@
 # Changelog
 
+## 2025-06-21T12:00:00Z
+
+- Fetch GitHub star list membership via GraphQL during sync
+- Add template variables for star list names, links, and markdown links
+- Gracefully continue sync with a warning when star list metadata cannot be fetched
+- Document star list support in README and design notes
+
 ## 2025-06-21T00:00:00Z
 
 - Initial GitHub Stars Sync plugin implementation

@@ -36,6 +36,28 @@ describe('renderTemplate', () => {
 		expect(rendered).toContain('obsidian, plugin');
 	});
 
+	it('formats star list metadata for templates', () => {
+		const rendered = renderTemplate(
+			'names: {{star_names}}\nlinks: {{star_links}}\n{{star_lists_markdown}}',
+			{
+				...sampleRepository,
+				starLists: [
+					{
+						name: 'Obsidian',
+						slug: 'obsidian',
+						url: 'https://github.com/stars/octocat/lists/obsidian',
+					},
+				],
+			},
+		);
+
+		expect(rendered).toContain('- Obsidian');
+		expect(rendered).toContain(
+			'https://github.com/stars/octocat/lists/obsidian',
+		);
+		expect(rendered).toContain('[Obsidian](https://github.com/stars/octocat/lists/obsidian)');
+	});
+
 	it('formats topics as YAML', () => {
 		const rendered = renderTemplate('topics: {{topics}}', sampleRepository);
 		expect(rendered).toContain('- obsidian');

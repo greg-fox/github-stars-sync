@@ -113,7 +113,13 @@ export default class GithubStarsSyncPlugin extends Plugin {
 			await this.saveSettings();
 
 			if (options.showNotice) {
-				new Notice(formatSyncNotice(outcome.result), 8000);
+				const notice = formatSyncNotice(outcome.result);
+				new Notice(
+					outcome.result.warnings.length > 0
+						? `${notice}\n${outcome.result.warnings.join('\n')}`
+						: notice,
+					8000,
+				);
 			}
 		} catch (error) {
 			const message =

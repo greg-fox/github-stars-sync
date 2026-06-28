@@ -3,6 +3,8 @@ import {
 	classifyGithubError,
 	fetchStarredRepositories,
 } from '../github/client';
+import { enrichRepositoriesWithStarLists } from '../github/enrichRepositories';
+import { fetchStarListMembership } from '../github/starLists';
 import { getPatFromSecretStorage } from '../secrets';
 import type { GithubStarsSyncSettings } from '../settings';
 import type { SyncResult, SyncState } from '../types';
@@ -33,24 +35,47 @@ export async function syncGithubStars(
 		...options.syncState,
 		lastSyncError: null,
 	};
+	const warnings: string[] = [];
 
 	try {
 		const repositories = await fetchStarredRepositories({ token });
+		let enrichedRepositories = repositories;
+
+		try {
+			const membership = await fetchStarListMembership(token);
+			enrichedRepositories = enrichRepositoriesWithStarLists(
+				repositories,
+				membership,
+			);
+		} catch (error) {
+			const message =
+				error instanceof Error
+					? error.message
+					: 'Failed to fetch GitHub star lists.';
+			warnings.push(
+				`Star list metadata was not synced: ${message}. Notes were still created from starred repositories.`,
+			);
+		}
+
 		const { result, repoNotes } = await writeRepositoryNotes(
 			app.vault,
 			options.settings,
-			repositories,
+			enrichedRepositories,
 			syncState.repoNotes,
 			options.settings.updateExistingNotes,
 		);
 
 		return {
-			result,
+			result: {
+				...result,
+				warnings,
+			},
 			syncState: {
 				...syncState,
 				repoNotes,
 				lastSyncTime: new Date().toISOString(),
-				lastSyncError: result.errors.length > 0 ? result.errors[0] ?? null : null,
+				lastSyncError:
+					result.errors.length > 0 ? result.errors[0] ?? null : null,
 			},
 		};
 	} catch (error) {
@@ -68,6 +93,10 @@ export function formatSyncNotice(result: SyncResult): string {
 
 	if (result.errors.length > 0) {
 		parts.push(`${result.errors.length} errors`);
+	}
+
+	if (result.warnings.length > 0) {
+		parts.push(`${result.warnings.length} warnings`);
 	}
 
 	return `GitHub stars sync complete: ${parts.join(', ')}.`;

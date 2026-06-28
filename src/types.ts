@@ -3,6 +3,14 @@ export interface GithubRepositoryOwner {
 	avatar_url?: string;
 }
 
+export interface StarListEntry {
+	name: string;
+	slug: string;
+	url: string;
+}
+
+export type StarListMembershipMap = Map<number, StarListEntry[]>;
+
 export interface GithubRepository {
 	id: number;
 	node_id: string;
@@ -24,6 +32,7 @@ export interface GithubRepository {
 	updated_at: string;
 	pushed_at: string;
 	starred_at?: string;
+	starLists?: StarListEntry[];
 }
 
 export interface StarredRepositoryResponse {
@@ -42,6 +51,7 @@ export interface SyncResult {
 	updated: number;
 	skipped: number;
 	errors: string[];
+	warnings: string[];
 }
 
 export interface TemplateContext {

@@ -16,6 +16,8 @@ language: "{{language}}"
 stars: {{stars}}
 forks: {{forks}}
 starred_at: "{{starred_at}}"
+star_names: {{star_names}}
+star_links: {{star_links}}
 topics: {{topics}}
 ---
 
@@ -24,6 +26,8 @@ topics: {{topics}}
 {{description}}
 
 [Open on GitHub]({{url}})
+
+{{star_lists_markdown}}
 `;
 
 export const TEMPLATE_VARIABLES = [
@@ -42,6 +46,26 @@ export const TEMPLATE_VARIABLES = [
 	{ name: 'updated_at', description: 'Last update date (ISO 8601)' },
 	{ name: 'pushed_at', description: 'Last push date (ISO 8601)' },
 	{ name: 'starred_at', description: 'When you starred the repository (ISO 8601)' },
+	{
+		name: 'star_names',
+		description: 'GitHub star list names as a YAML list',
+	},
+	{
+		name: 'star_links',
+		description: 'GitHub star list URLs as a YAML list',
+	},
+	{
+		name: 'star_names_inline',
+		description: 'GitHub star list names as a comma-separated string',
+	},
+	{
+		name: 'star_links_inline',
+		description: 'GitHub star list URLs as a comma-separated string',
+	},
+	{
+		name: 'star_lists_markdown',
+		description: 'Markdown bullet links to each GitHub star list',
+	},
 	{ name: 'is_private', description: 'Whether the repository is private (true/false)' },
 	{ name: 'is_fork', description: 'Whether the repository is a fork (true/false)' },
 	{ name: 'topics', description: 'Repository topics as a YAML list' },

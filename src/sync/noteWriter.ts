@@ -27,6 +27,7 @@ export async function writeRepositoryNotes(
 		updated: 0,
 		skipped: 0,
 		errors: [],
+		warnings: [],
 	};
 
 	const nextRepoNotes = { ...repoNotes };

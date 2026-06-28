@@ -1,4 +1,4 @@
-import type { GithubRepository } from '../types';
+import type { GithubRepository, StarListEntry } from '../types';
 
 const INVALID_FILENAME_CHARS = /[<>:"/\\|?*]/g;
 
@@ -30,6 +30,19 @@ export function renderTemplate(
 		is_fork: repository.fork ? 'true' : 'false',
 		topics: formatTopicsYaml(repository.topics ?? []),
 		topics_inline: (repository.topics ?? []).join(', '),
+		star_names: formatYamlStringList(
+			(repository.starLists ?? []).map((list) => list.name),
+		),
+		star_links: formatYamlStringList(
+			(repository.starLists ?? []).map((list) => list.url),
+		),
+		star_names_inline: formatInlineList(
+			(repository.starLists ?? []).map((list) => list.name),
+		),
+		star_links_inline: formatInlineList(
+			(repository.starLists ?? []).map((list) => list.url),
+		),
+		star_lists_markdown: formatStarListsMarkdown(repository.starLists ?? []),
 	};
 
 	let rendered = template;
@@ -49,9 +62,35 @@ export function renderFilename(
 }
 
 function formatTopicsYaml(topics: string[]): string {
-	if (topics.length === 0) {
+	return formatYamlStringList(topics);
+}
+
+function formatYamlStringList(values: string[]): string {
+	if (values.length === 0) {
 		return '[]';
 	}
 
-	return `\n${topics.map((topic) => `  - ${topic}`).join('\n')}`;
+	return `\n${values.map((value) => `  - ${escapeYamlString(value)}`).join('\n')}`;
+}
+
+function escapeYamlString(value: string): string {
+	if (/[:#"'[\]{}&,*?|>!%@`]|^\s|\s$/.test(value)) {
+		return `"${value.replace(/"/g, '\\"')}"`;
+	}
+
+	return value;
+}
+
+function formatInlineList(values: string[]): string {
+	return values.join(', ');
+}
+
+function formatStarListsMarkdown(starLists: StarListEntry[]): string {
+	if (starLists.length === 0) {
+		return '';
+	}
+
+	return starLists
+		.map((list) => `- [${list.name}](${list.url})`)
+		.join('\n');
 }

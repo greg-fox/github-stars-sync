@@ -43,3 +43,27 @@ No runtime npm dependencies are bundled. GitHub access uses Obsidian’s `reques
 Template variables mirror the comprehensive set from obsidian-github-stars-manager’s properties export, adapted for a single markdown template rather than a separate properties editor.
 
 User-specific fields such as `{{notes}}`, `{{user_tags}}`, and `{{linked_note}}` from that plugin are intentionally omitted because this plugin does not maintain a separate enhancement layer.
+
+## 2025-06-21 — GitHub star list metadata
+
+### Source
+
+GitHub does not expose star list membership on the REST `GET /user/starred` endpoint. The plugin fetches list membership separately via the official GraphQL API (`viewer.lists` and paginated `UserList.items`).
+
+### Merge strategy
+
+During sync:
+
+1. REST fetch provides starred repository metadata.
+2. GraphQL fetch builds a `repoId → [{ name, slug, url }]` map using each list’s `databaseId`.
+3. Repositories are enriched before template rendering.
+
+If the GraphQL fetch fails (for example missing `read:user` scope), sync still completes using starred repository data and records a warning.
+
+### Template variables
+
+- `{{star_names}}` / `{{star_links}}` — YAML frontmatter lists
+- `{{star_names_inline}}` / `{{star_links_inline}}` — inline comma-separated values
+- `{{star_lists_markdown}}` — markdown links to the list pages on GitHub
+
+List URLs follow GitHub’s public format: `https://github.com/stars/<login>/lists/<slug>`.

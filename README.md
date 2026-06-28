@@ -53,8 +53,8 @@ npm test
 1. Open GitHub → **Settings → Developer settings → Personal access tokens**.
 2. Create a **fine-grained** or **classic** token.
 3. Grant read access to your starred repositories:
-   - **Classic token:** enable the `public_repo` scope (use `repo` if you need private starred repos).
-   - **Fine-grained token:** allow read access to **Metadata** and repository contents you star.
+   - **Classic token:** enable the `public_repo` scope (use `repo` if you need private starred repos) and **`read:user`** (or `user`) so star list metadata can be fetched via GraphQL.
+   - **Fine-grained token:** allow read access to **Metadata**, repository contents you star, and **Profile** / user read permissions needed for star lists.
 4. Copy the generated token.
 
 ## Configure the plugin
@@ -107,10 +107,17 @@ Use these placeholders in the filename and note templates:
 | `{{updated_at}}` | Updated date (ISO 8601) |
 | `{{pushed_at}}` | Last push date (ISO 8601) |
 | `{{starred_at}}` | When you starred the repo (ISO 8601) |
+| `{{star_names}}` | GitHub star list names as a YAML list |
+| `{{star_links}}` | GitHub star list URLs as a YAML list |
+| `{{star_names_inline}}` | Comma-separated star list names |
+| `{{star_links_inline}}` | Comma-separated star list URLs |
+| `{{star_lists_markdown}}` | Markdown bullet links to each star list |
 | `{{is_private}}` | `true` or `false` |
 | `{{is_fork}}` | `true` or `false` |
 | `{{topics}}` | YAML list of topics |
 | `{{topics_inline}}` | Comma-separated topics |
+
+Star list links use GitHub’s public list URLs, for example `https://github.com/stars/<username>/lists/<slug>`.
 
 ## Documentation
 

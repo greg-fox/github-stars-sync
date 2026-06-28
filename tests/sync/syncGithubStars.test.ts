@@ -33,6 +33,10 @@ vi.mock('../../src/github/client', () => ({
 	),
 }));
 
+vi.mock('../../src/github/starLists', () => ({
+	fetchStarListMembership: vi.fn(async () => new Map()),
+}));
+
 describe('syncGithubStars', () => {
 	it('throws when no token is configured', async () => {
 		const app = {

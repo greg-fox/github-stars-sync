@@ -9,6 +9,7 @@ describe('formatSyncNotice', () => {
 				updated: 1,
 				skipped: 3,
 				errors: [],
+				warnings: [],
 			}),
 		).toBe('GitHub stars sync complete: 2 created, 1 updated, 3 skipped.');
 	});

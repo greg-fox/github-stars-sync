@@ -10,6 +10,7 @@ Synchronize your GitHub starred repositories into Obsidian notes. Configure a pe
 - Stores your GitHub personal access token in [Obsidian secret storage](https://docs.obsidian.md/plugins/guides/secret-storage) (not in `data.json`)
 - Automatic background sync on a configurable interval
 - Manual sync via command palette or ribbon icon
+- Optional maps of content: one note per distinct GitHub star list, with repository notes linking back to them
 
 ## Requirements
 
@@ -85,6 +86,17 @@ Click **Test connection** to verify the token works.
 | **Sync now** | Run a sync immediately |
 
 You can also run **Sync GitHub stars now** from the command palette or click the star ribbon icon.
+
+### Maps of content
+
+| Setting | Description |
+| --- | --- |
+| **Create star list maps of content** | When enabled, creates one note per distinct GitHub star list found among your starred repositories |
+| **Destination folder** | Vault folder for star list map of content notes (default: `GitHub Stars/MOCs`) |
+| **Link star names to maps of content** | When enabled, `{{star_names}}` and `{{star_names_inline}}` in repository notes become `[[wikilinks]]` to the matching map of content note instead of plain text |
+| **Map of content template** | Markdown template for each map of content note, using `{{star_name}}` and `{{star_link}}` placeholders |
+
+Sync only *creates* map of content notes that don't already exist; existing map of content notes are never overwritten, so manual edits are preserved.
 
 ## Template variables
 

@@ -90,4 +90,53 @@ describe('syncGithubStars', () => {
 		expect(outcome.syncState.lastSyncTime).not.toBeNull();
 		expect(create).toHaveBeenCalledOnce();
 	});
+
+	it('creates star list MOC notes when enabled', async () => {
+		const create = vi.fn(async (path: string) => ({ path }));
+		const app = {
+			secretStorage: {
+				getSecret: vi.fn().mockReturnValue('ghp_test'),
+			},
+			vault: {
+				getAbstractFileByPath: vi.fn().mockReturnValue(null),
+				createFolder: vi.fn(async () => undefined),
+				create,
+				modify: vi.fn(),
+			},
+		} as unknown as App;
+
+		const { fetchStarListMembership } = await import(
+			'../../src/github/starLists'
+		);
+		vi.mocked(fetchStarListMembership).mockResolvedValueOnce(
+			new Map([
+				[
+					7,
+					[
+						{
+							name: 'Obsidian',
+							slug: 'obsidian',
+							url: 'https://github.com/stars/me/lists/obsidian',
+						},
+					],
+				],
+			]),
+		);
+
+		const outcome = await syncGithubStars(app, {
+			settings: { ...DEFAULT_SETTINGS, mocEnabled: true },
+			syncState: {
+				lastSyncTime: null,
+				lastSyncError: null,
+				repoNotes: {},
+			},
+		});
+
+		expect(outcome.result.mocsCreated).toBe(1);
+		expect(outcome.result.mocsSkipped).toBe(0);
+		expect(create).toHaveBeenCalledWith(
+			`${DEFAULT_SETTINGS.mocDestinationFolder}/Obsidian.md`,
+			expect.stringContaining('Obsidian'),
+		);
+	});
 });

@@ -67,3 +67,25 @@ If the GraphQL fetch fails (for example missing `read:user` scope), sync still c
 - `{{star_lists_markdown}}` — markdown links to the list pages on GitHub
 
 List URLs follow GitHub’s public format: `https://github.com/stars/<login>/lists/<slug>`.
+
+## 2026-07-25 — Star list maps of content (MOC)
+
+### Goal
+
+Let users generate one "map of content" note per GitHub star list, and optionally link repository notes back to those MOC notes via wikilinks, without requiring a second plugin or manual note curation.
+
+### Distinctness and identity
+
+Star lists are deduplicated by `slug` (GitHub's stable per-list identifier) across all enriched repositories in a sync, since a user's star list names are already unique but slugs are the field also used to build the list's canonical URL.
+
+### Filenames and linking
+
+A MOC note's filename is the sanitized star list **name** (not slug), written to a separate configurable destination folder (default `GitHub Stars/MOCs`). Using the plain name as the filename means `[[Star List Name]]` wikilinks resolve correctly regardless of which folder the MOC note lives in, matching how Obsidian resolves wikilinks by filename rather than full path.
+
+### Create-only, never overwrite
+
+Sync only creates MOC notes that do not already exist. Unlike repository notes (which have an **Update existing notes** toggle), MOC notes have no re-render option, since they are meant to be user-curated landing pages rather than generated exports.
+
+### Linking repository notes to MOCs
+
+The existing `{{star_names}}` and `{{star_names_inline}}` template variables are reused rather than adding new ones. When **Link star names to maps of content** is enabled, each star name is wrapped as `[[name]]` before being formatted into the YAML list / inline string. `{{star_lists_markdown}}` (which links out to GitHub) is intentionally left unchanged, since it serves a different purpose (an external reference, not a vault-internal MOC link).

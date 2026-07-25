@@ -52,6 +52,8 @@ export interface SyncResult {
 	skipped: number;
 	errors: string[];
 	warnings: string[];
+	mocsCreated: number;
+	mocsSkipped: number;
 }
 
 export interface TemplateContext {

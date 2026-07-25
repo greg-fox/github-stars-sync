@@ -20,6 +20,7 @@ src/
   sync/
     syncService.ts        Sync orchestration
     noteWriter.ts         Vault folder and file create/update
+    mocWriter.ts          Distinct star list collection and MOC note create
   ui/
     settingsTab.ts        Plugin settings UI
 ```
@@ -40,9 +41,16 @@ flowchart TD
   I -- Yes --> K{Update existing enabled?}
   K -- No --> L[Skip]
   K -- Yes --> M[Modify note]
-  J --> N[Save sync state]
+  J --> N{MOCs enabled?}
   M --> N
   L --> N
+  N -- No --> S[Save sync state]
+  N -- Yes --> O[Collect distinct star lists]
+  O --> P{MOC note exists?}
+  P -- No --> Q[Create MOC note]
+  P -- Yes --> R[Skip]
+  Q --> S
+  R --> S
 ```
 
 ## Persisted data
@@ -56,4 +64,4 @@ Secrets are stored separately by Obsidian and are not part of `data.json`.
 
 ## Testing
 
-Unit tests cover template rendering, settings normalization, pagination, secret helpers, GitHub client pagination, and sync notice formatting. UI and Obsidian vault integration are validated manually in Obsidian.
+Unit tests cover template rendering, settings normalization, pagination, secret helpers, GitHub client pagination, MOC note writing, and sync notice formatting. UI and Obsidian vault integration are validated manually in Obsidian.

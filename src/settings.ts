@@ -1,4 +1,6 @@
 import {
+	DEFAULT_MOC_FOLDER,
+	DEFAULT_MOC_TEMPLATE,
 	DEFAULT_NOTE_TEMPLATE,
 	DEFAULT_PAT_SECRET_NAME,
 	MAX_SYNC_INTERVAL_HOURS,
@@ -13,6 +15,10 @@ export interface GithubStarsSyncSettings {
 	autoSync: boolean;
 	syncIntervalHours: number;
 	updateExistingNotes: boolean;
+	mocEnabled: boolean;
+	mocDestinationFolder: string;
+	mocLinkStarNames: boolean;
+	mocTemplate: string;
 }
 
 export const DEFAULT_SETTINGS: GithubStarsSyncSettings = {
@@ -23,6 +29,10 @@ export const DEFAULT_SETTINGS: GithubStarsSyncSettings = {
 	autoSync: true,
 	syncIntervalHours: 24,
 	updateExistingNotes: false,
+	mocEnabled: false,
+	mocDestinationFolder: DEFAULT_MOC_FOLDER,
+	mocLinkStarNames: false,
+	mocTemplate: DEFAULT_MOC_TEMPLATE,
 };
 
 export function normalizeSyncIntervalHours(hours: number): number {
@@ -51,5 +61,9 @@ export function normalizeSettings(
 		filenameTemplate:
 			settings.filenameTemplate?.trim() || DEFAULT_SETTINGS.filenameTemplate,
 		noteTemplate: settings.noteTemplate ?? DEFAULT_SETTINGS.noteTemplate,
+		mocDestinationFolder:
+			settings.mocDestinationFolder?.trim() ||
+			DEFAULT_SETTINGS.mocDestinationFolder,
+		mocTemplate: settings.mocTemplate ?? DEFAULT_SETTINGS.mocTemplate,
 	};
 }

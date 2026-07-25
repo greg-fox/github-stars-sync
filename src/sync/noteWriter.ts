@@ -28,6 +28,8 @@ export async function writeRepositoryNotes(
 		skipped: 0,
 		errors: [],
 		warnings: [],
+		mocsCreated: 0,
+		mocsSkipped: 0,
 	};
 
 	const nextRepoNotes = { ...repoNotes };
@@ -44,7 +46,9 @@ export async function writeRepositoryNotes(
 			const filePath = normalizePath(
 				`${settings.notesFolder}/${filename}.md`,
 			);
-			const content = renderTemplate(settings.noteTemplate, repository);
+			const content = renderTemplate(settings.noteTemplate, repository, {
+				linkStarNamesToMoc: settings.mocEnabled && settings.mocLinkStarNames,
+			});
 			const existingPath = nextRepoNotes[repoKey];
 			const existingFile = existingPath
 				? vault.getAbstractFileByPath(existingPath)

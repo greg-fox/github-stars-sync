@@ -8,6 +8,7 @@ import {
 import {
 	MAX_SYNC_INTERVAL_HOURS as MAX_SYNC_HOURS,
 	MIN_SYNC_INTERVAL_HOURS as MIN_SYNC_HOURS,
+	MOC_TEMPLATE_VARIABLES,
 	TEMPLATE_VARIABLES,
 } from '../constants';
 import type GithubStarsSyncPlugin from '../main';
@@ -165,6 +166,96 @@ export class GithubStarsSyncSettingTab extends PluginSettingTab {
 			const item = listEl.createEl('li');
 			item.createEl('code', { text: `{{${variable.name}}}` });
 			item.appendText(` — ${variable.description}`);
+		}
+
+		new Setting(containerEl)
+			.setName('Maps of content')
+			.setHeading();
+
+		new Setting(containerEl)
+			.setName('Create star list maps of content')
+			.setDesc(
+				'Create a note for every distinct GitHub star list found among your starred repositories.',
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.mocEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.mocEnabled = value;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			);
+
+		if (this.plugin.settings.mocEnabled) {
+			new Setting(containerEl)
+				.setName('Destination folder')
+				.setDesc(
+					'Folder inside the vault where star list maps of content are created.',
+				)
+				.addText((text) =>
+					text
+						.setPlaceholder(DEFAULT_SETTINGS.mocDestinationFolder)
+						.setValue(this.plugin.settings.mocDestinationFolder)
+						.onChange(async (value) => {
+							this.plugin.settings.mocDestinationFolder = value;
+							await this.plugin.saveSettings();
+						}),
+				);
+
+			new Setting(containerEl)
+				.setName('Link star names to maps of content')
+				.setDesc(
+					'When enabled, star names in repository notes become [[wikilinks]] to their map of content note instead of plain text.',
+				)
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.mocLinkStarNames)
+						.onChange(async (value) => {
+							this.plugin.settings.mocLinkStarNames = value;
+							await this.plugin.saveSettings();
+						}),
+				);
+
+			new Setting(containerEl)
+				.setName('Map of content template')
+				.setDesc(
+					'Markdown template for each star list map of content note. Use {{variable}} placeholders.',
+				)
+				.addTextArea((text) => {
+					text.inputEl.rows = 8;
+					text.inputEl.addClass('github-stars-sync-template-input');
+					text
+						.setValue(this.plugin.settings.mocTemplate)
+						.onChange(async (value) => {
+							this.plugin.settings.mocTemplate = value;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			new Setting(containerEl)
+				.setName('Reset map of content template')
+				.setDesc('Restore the default map of content template.')
+				.addButton((button) =>
+					button.setButtonText('Reset').onClick(async () => {
+						this.plugin.settings.mocTemplate = DEFAULT_SETTINGS.mocTemplate;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+				);
+
+			const mocVariablesEl = containerEl.createDiv(
+				'github-stars-sync-template-variables',
+			);
+			mocVariablesEl.createEl('p', {
+				text: 'Available map of content template variables:',
+			});
+			const mocListEl = mocVariablesEl.createEl('ul');
+			for (const variable of MOC_TEMPLATE_VARIABLES) {
+				const item = mocListEl.createEl('li');
+				item.createEl('code', { text: `{{${variable.name}}}` });
+				item.appendText(` — ${variable.description}`);
+			}
 		}
 
 		new Setting(containerEl)

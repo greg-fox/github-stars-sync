@@ -8,6 +8,7 @@ import { fetchStarListMembership } from '../github/starLists';
 import { getPatFromSecretStorage } from '../secrets';
 import type { GithubStarsSyncSettings } from '../settings';
 import type { SyncResult, SyncState } from '../types';
+import { collectDistinctStarLists, writeStarListMocs } from './mocWriter';
 import { writeRepositoryNotes } from './noteWriter';
 
 export interface SyncOptions {
@@ -65,17 +66,35 @@ export async function syncGithubStars(
 			options.settings.updateExistingNotes,
 		);
 
+		let mocsCreated = 0;
+		let mocsSkipped = 0;
+		const errors = [...result.errors];
+
+		if (options.settings.mocEnabled) {
+			const starLists = collectDistinctStarLists(enrichedRepositories);
+			const mocResult = await writeStarListMocs(
+				app.vault,
+				options.settings,
+				starLists,
+			);
+			mocsCreated = mocResult.created;
+			mocsSkipped = mocResult.skipped;
+			errors.push(...mocResult.errors.map((message) => `MOC: ${message}`));
+		}
+
 		return {
 			result: {
 				...result,
+				errors,
 				warnings,
+				mocsCreated,
+				mocsSkipped,
 			},
 			syncState: {
 				...syncState,
 				repoNotes,
 				lastSyncTime: new Date().toISOString(),
-				lastSyncError:
-					result.errors.length > 0 ? result.errors[0] ?? null : null,
+				lastSyncError: errors.length > 0 ? errors[0] ?? null : null,
 			},
 		};
 	} catch (error) {
@@ -97,6 +116,11 @@ export function formatSyncNotice(result: SyncResult): string {
 
 	if (result.warnings.length > 0) {
 		parts.push(`${result.warnings.length} warnings`);
+	}
+
+	if (result.mocsCreated > 0 || result.mocsSkipped > 0) {
+		parts.push(`${result.mocsCreated} MOCs created`);
+		parts.push(`${result.mocsSkipped} MOCs skipped`);
 	}
 
 	return `GitHub stars sync complete: ${parts.join(', ')}.`;

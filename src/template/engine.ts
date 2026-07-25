@@ -6,10 +6,20 @@ export function sanitizeFilename(name: string): string {
 	return name.replace(INVALID_FILENAME_CHARS, '-').trim();
 }
 
+export interface RenderTemplateOptions {
+	linkStarNamesToMoc?: boolean;
+}
+
 export function renderTemplate(
 	template: string,
 	repository: GithubRepository,
+	options: RenderTemplateOptions = {},
 ): string {
+	const linkStarNamesToMoc = options.linkStarNamesToMoc ?? false;
+	const starNames = (repository.starLists ?? []).map((list) =>
+		linkStarNamesToMoc ? `[[${list.name}]]` : list.name,
+	);
+
 	const replacements: Record<string, string> = {
 		name: repository.name ?? '',
 		full_name: repository.full_name ?? '',
@@ -30,15 +40,11 @@ export function renderTemplate(
 		is_fork: repository.fork ? 'true' : 'false',
 		topics: formatTopicsYaml(repository.topics ?? []),
 		topics_inline: (repository.topics ?? []).join(', '),
-		star_names: formatYamlStringList(
-			(repository.starLists ?? []).map((list) => list.name),
-		),
+		star_names: formatYamlStringList(starNames),
 		star_links: formatYamlStringList(
 			(repository.starLists ?? []).map((list) => list.url),
 		),
-		star_names_inline: formatInlineList(
-			(repository.starLists ?? []).map((list) => list.name),
-		),
+		star_names_inline: formatInlineList(starNames),
 		star_links_inline: formatInlineList(
 			(repository.starLists ?? []).map((list) => list.url),
 		),
@@ -59,6 +65,27 @@ export function renderFilename(
 ): string {
 	const rendered = renderTemplate(template, repository);
 	return sanitizeFilename(rendered);
+}
+
+export function renderMocTemplate(
+	template: string,
+	starList: StarListEntry,
+): string {
+	const replacements: Record<string, string> = {
+		star_name: starList.name ?? '',
+		star_link: starList.url ?? '',
+	};
+
+	let rendered = template;
+	for (const [key, value] of Object.entries(replacements)) {
+		rendered = rendered.replaceAll(`{{${key}}}`, value);
+	}
+
+	return rendered;
+}
+
+export function renderMocFilename(starList: StarListEntry): string {
+	return sanitizeFilename(starList.name ?? '');
 }
 
 function formatTopicsYaml(topics: string[]): string {

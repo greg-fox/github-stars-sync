@@ -30,6 +30,18 @@ topics: {{topics}}
 {{star_lists_markdown}}
 `;
 
+export const DEFAULT_MOC_FOLDER = 'GitHub Stars/MOCs';
+
+export const DEFAULT_MOC_TEMPLATE = `# {{star_name}}
+
+[View this list on GitHub]({{star_link}})
+`;
+
+export const MOC_TEMPLATE_VARIABLES = [
+	{ name: 'star_name', description: 'GitHub star list name' },
+	{ name: 'star_link', description: 'GitHub star list URL' },
+] as const;
+
 export const TEMPLATE_VARIABLES = [
 	{ name: 'name', description: 'Repository name' },
 	{ name: 'full_name', description: 'Owner and repository name (owner/repo)' },

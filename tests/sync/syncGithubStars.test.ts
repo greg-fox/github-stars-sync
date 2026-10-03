@@ -45,6 +45,7 @@ describe('syncGithubStars', () => {
 			},
 			vault: {
 				getAbstractFileByPath: vi.fn().mockReturnValue(null),
+				getAllLoadedFiles: vi.fn(() => []),
 				createFolder: vi.fn(),
 				create: vi.fn(),
 				modify: vi.fn(),
@@ -71,6 +72,7 @@ describe('syncGithubStars', () => {
 			},
 			vault: {
 				getAbstractFileByPath: vi.fn().mockReturnValue(null),
+				getAllLoadedFiles: vi.fn(() => []),
 				createFolder: vi.fn(async () => undefined),
 				create,
 				modify: vi.fn(),
@@ -99,6 +101,7 @@ describe('syncGithubStars', () => {
 			},
 			vault: {
 				getAbstractFileByPath: vi.fn().mockReturnValue(null),
+				getAllLoadedFiles: vi.fn(() => []),
 				createFolder: vi.fn(async () => undefined),
 				create,
 				modify: vi.fn(),

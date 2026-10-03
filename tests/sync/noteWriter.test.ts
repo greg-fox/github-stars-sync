@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { TFile } from 'obsidian';
+import { TFile, TFolder } from 'obsidian';
 import type { Vault } from 'obsidian';
 import { DEFAULT_SETTINGS } from '../../src/settings';
 import type { GithubRepository } from '../../src/types';
-import { writeRepositoryNotes } from '../../src/sync/noteWriter';
+import { ensureFolderExists, writeRepositoryNotes } from '../../src/sync/noteWriter';
 
 const sampleRepository: GithubRepository = {
 	id: 99,
@@ -41,6 +41,7 @@ function createVaultMock(options?: {
 			}
 			return null;
 		}),
+		getAllLoadedFiles: vi.fn(() => []),
 		createFolder: vi.fn(async () => undefined),
 		create: vi.fn(async (path: string, content: string) => {
 			createdPaths.push(path);
@@ -102,5 +103,103 @@ describe('writeRepositoryNotes', () => {
 
 		expect(result.updated).toBe(1);
 		expect(modified).toHaveLength(1);
+	});
+});
+
+describe('ensureFolderExists', () => {
+	function folderAt(path: string): TFolder {
+		const folder = new TFolder();
+		folder.path = path;
+		return folder;
+	}
+
+	it('returns the existing path without creating when the folder is indexed', async () => {
+		const createFolder = vi.fn();
+		const vault = {
+			getAbstractFileByPath: vi.fn(() => folderAt('GitHub Stars')),
+			getAllLoadedFiles: vi.fn(() => []),
+			createFolder,
+		} as unknown as Vault;
+
+		await expect(ensureFolderExists(vault, 'GitHub Stars')).resolves.toBe(
+			'GitHub Stars',
+		);
+		expect(createFolder).not.toHaveBeenCalled();
+	});
+
+	it('reuses an existing folder whose name differs only by case', async () => {
+		const createFolder = vi.fn();
+		const vault = {
+			getAbstractFileByPath: vi.fn(() => null),
+			getAllLoadedFiles: vi.fn(() => [folderAt('github stars')]),
+			createFolder,
+		} as unknown as Vault;
+
+		await expect(ensureFolderExists(vault, 'GitHub Stars')).resolves.toBe(
+			'github stars',
+		);
+		expect(createFolder).not.toHaveBeenCalled();
+	});
+
+	it('continues when createFolder reports the folder already exists in the index', async () => {
+		let folderNowExists = false;
+		const vault = {
+			getAbstractFileByPath: vi.fn(() =>
+				folderNowExists ? folderAt('GitHub Stars') : null,
+			),
+			getAllLoadedFiles: vi.fn(() => []),
+			createFolder: vi.fn(async () => {
+				folderNowExists = true;
+				throw new Error('Folder already exists.');
+			}),
+		} as unknown as Vault;
+
+		await expect(ensureFolderExists(vault, 'GitHub Stars')).resolves.toBe(
+			'GitHub Stars',
+		);
+	});
+
+	it('continues when the folder exists on disk but is not in the vault index', async () => {
+		const vault = {
+			getAbstractFileByPath: vi.fn(() => null),
+			getAllLoadedFiles: vi.fn(() => []),
+			createFolder: vi.fn(async () => {
+				throw new Error('Folder already exists.');
+			}),
+			adapter: { exists: vi.fn(async () => true) },
+		} as unknown as Vault;
+
+		await expect(ensureFolderExists(vault, 'GitHub Stars')).resolves.toBe(
+			'GitHub Stars',
+		);
+	});
+
+	it('throws when the path is a file', async () => {
+		const file = new TFile();
+		file.path = 'GitHub Stars';
+		const vault = {
+			getAbstractFileByPath: vi.fn(() => file),
+			getAllLoadedFiles: vi.fn(() => []),
+			createFolder: vi.fn(),
+		} as unknown as Vault;
+
+		await expect(ensureFolderExists(vault, 'GitHub Stars')).rejects.toThrow(
+			'is a file, not a folder',
+		);
+	});
+
+	it('rethrows when the folder still does not exist after a failed create', async () => {
+		const vault = {
+			getAbstractFileByPath: vi.fn(() => null),
+			getAllLoadedFiles: vi.fn(() => []),
+			createFolder: vi.fn(async () => {
+				throw new Error('Disk full');
+			}),
+			adapter: { exists: vi.fn(async () => false) },
+		} as unknown as Vault;
+
+		await expect(ensureFolderExists(vault, 'GitHub Stars')).rejects.toThrow(
+			'Disk full',
+		);
 	});
 });

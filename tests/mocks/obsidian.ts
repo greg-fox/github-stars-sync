@@ -6,6 +6,12 @@ export function normalizePath(path: string): string {
 	return path.replace(/\\/g, '/');
 }
 
-export class TFile {}
+export class TFile {
+	path = '';
+}
+
+export class TFolder {
+	path = '';
+}
 
 export class Vault {}

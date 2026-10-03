@@ -37,13 +37,16 @@ export async function writeStarListMocs(
 		return result;
 	}
 
-	await ensureFolderExists(vault, settings.mocDestinationFolder);
+	const mocFolder = await ensureFolderExists(
+		vault,
+		settings.mocDestinationFolder,
+	);
 
 	for (const starList of starLists) {
 		try {
 			const filename = renderMocFilename(starList);
 			const filePath = normalizePath(
-				`${settings.mocDestinationFolder}/${filename}.md`,
+				`${mocFolder}/${filename}.md`,
 			);
 
 			if (vault.getAbstractFileByPath(filePath) instanceof TFile) {

@@ -31,6 +31,7 @@ function createVaultMock(options?: { existingPaths?: string[] }) {
 			}
 			return null;
 		}),
+		getAllLoadedFiles: vi.fn(() => []),
 		createFolder: vi.fn(async () => undefined),
 		create: vi.fn(async (path: string, content: string) => {
 			createdPaths.push(path);

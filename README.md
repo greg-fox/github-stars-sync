@@ -18,6 +18,18 @@ Synchronize your GitHub starred repositories into Obsidian notes. Configure a pe
 - Node.js 18+ (for development builds)
 - A GitHub personal access token with **`public_repo`** scope (or **`repo`** if you star private repositories)
 
+## Network use and privacy
+
+This plugin connects to GitHub. It does not contact any other service and does not collect telemetry.
+
+- **What it calls:** the GitHub REST API (`https://api.github.com/user`, `https://api.github.com/user/starred`) and the GitHub GraphQL API (`https://api.github.com/graphql`, for star list membership).
+- **When it calls them:** when you run **Sync now**, the **Sync GitHub stars now** command, or the ribbon icon; when you select **Test connection**; and, if **Automatic sync** is enabled, shortly after Obsidian starts and then on the configured interval.
+- **What is sent:** your personal access token, in the `Authorization` header of each request to GitHub. No vault content, file names, or other personal data is sent.
+- **What is stored:** the token is kept in Obsidian secret storage, not in the plugin's `data.json`. `data.json` holds your settings, the last sync time and error, and a map of repository IDs to note paths.
+- **What is written:** notes are created and updated only inside the folders you configure, using data returned by GitHub.
+
+Turn off **Automatic sync** if you want the plugin to contact GitHub only when you ask it to.
+
 ## Build and install
 
 ### Development

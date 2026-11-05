@@ -1,50 +1,60 @@
 name: Release Obsidian plugin
 
+# Push a tag that exactly matches manifest.json's version (no leading "v") to build and
+# attach main.js, manifest.json, and styles.css to a draft GitHub release.
 on:
     push:
         tags:
             - '*'
 
 jobs:
-    build:
+    release:
         runs-on: ubuntu-latest
         permissions:
             contents: write
             id-token: write
             attestations: write
+
         steps:
             - uses: actions/checkout@v6
 
-            - name: Use Node.js
-              uses: actions/setup-node@v6
+            - uses: actions/setup-node@v6
               with:
-                  node-version: 24
+                  node-version: 22.x
                   cache: 'npm'
 
-            - name: Build plugin
+            - name: Check tag matches manifest version
               run: |
-                  npm ci
-                  npm run build
+                  tag="${GITHUB_REF#refs/tags/}"
+                  version="$(node -p "require('./manifest.json').version")"
+                  if [ "$tag" != "$version" ]; then
+                      echo "Tag $tag does not match manifest.json version $version" >&2
+                      exit 1
+                  fi
+                  if ! node -e "process.exit(require('./versions.json')['$version'] ? 0 : 1)"; then
+                      echo "versions.json has no entry for $version" >&2
+                      exit 1
+                  fi
 
-            - name: Check for optional styles
-              id: styles
-              run: |
-                  [ -f styles.css ] && echo "exists=true" >> "$GITHUB_OUTPUT" || echo "exists=false" >> "$GITHUB_OUTPUT"
+            - run: npm ci
+            - run: npm run lint
+            - run: npm test
+            - run: npm run build
 
             - name: Attest build provenance
               uses: actions/attest@v4
               with:
                   subject-path: |
                       main.js
-                      ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }}
+                      styles.css
 
-            - name: Create release
+            - name: Create draft release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   tag="${GITHUB_REF#refs/tags/}"
-
                   gh release create "$tag" \
-                    --title="$tag" \
-                    --draft \
-                    main.js manifest.json ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }}
+                      --title "$tag" \
+                      --draft \
+                      --notes "See changelog.md for details." \
+                      main.js manifest.json styles.css

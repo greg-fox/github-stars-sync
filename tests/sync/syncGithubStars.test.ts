@@ -48,7 +48,7 @@ describe('syncGithubStars', () => {
 				getAllLoadedFiles: vi.fn(() => []),
 				createFolder: vi.fn(),
 				create: vi.fn(),
-				modify: vi.fn(),
+				process: vi.fn(),
 			},
 		} as unknown as App;
 
@@ -75,7 +75,7 @@ describe('syncGithubStars', () => {
 				getAllLoadedFiles: vi.fn(() => []),
 				createFolder: vi.fn(async () => undefined),
 				create,
-				modify: vi.fn(),
+				process: vi.fn(),
 			},
 		} as unknown as App;
 
@@ -104,7 +104,7 @@ describe('syncGithubStars', () => {
 				getAllLoadedFiles: vi.fn(() => []),
 				createFolder: vi.fn(async () => undefined),
 				create,
-				modify: vi.fn(),
+				process: vi.fn(),
 			},
 		} as unknown as App;
 
@@ -153,7 +153,7 @@ describe('syncGithubStars', () => {
 				getAllLoadedFiles: vi.fn(() => []),
 				createFolder: vi.fn(async () => undefined),
 				create: vi.fn(async (path: string) => ({ path })),
-				modify: vi.fn(),
+				process: vi.fn(),
 			},
 		} as unknown as App;
 

@@ -29,6 +29,8 @@ topics: {{topics}}
 [Open on GitHub]({{url}})
 
 {{star_lists_markdown}}
+
+{{star_mocs_markdown}}
 `;
 
 export const DEFAULT_MOC_FOLDER = 'GitHub Stars/MOCs';
@@ -36,11 +38,33 @@ export const DEFAULT_MOC_FOLDER = 'GitHub Stars/MOCs';
 export const DEFAULT_MOC_TEMPLATE = `# {{star_name}}
 
 [View this list on GitHub]({{star_link}})
+
+\`\`\`base
+filters:
+  and:
+    - file.inFolder("{{notes_folder}}")
+    - file.hasLink(this.file)
+views:
+  - type: table
+    name: Repositories
+    order:
+      - file.name
+      - language
+      - stars
+      - starred_at
+    sort:
+      - property: starred_at
+        direction: DESC
+\`\`\`
 `;
 
 export const MOC_TEMPLATE_VARIABLES = [
 	{ name: 'star_name', description: 'GitHub star list name' },
 	{ name: 'star_link', description: 'GitHub star list URL' },
+	{
+		name: 'notes_folder',
+		description: 'Folder that holds repository notes, for filtering a base',
+	},
 ] as const;
 
 export const TEMPLATE_VARIABLES = [
@@ -82,6 +106,16 @@ export const TEMPLATE_VARIABLES = [
 	{
 		name: 'star_lists_markdown',
 		description: 'Markdown bullet links to each GitHub star list',
+	},
+	{
+		name: 'star_mocs',
+		description:
+			'Links to each star list map of content as a YAML list (empty when maps of content are off)',
+	},
+	{
+		name: 'star_mocs_markdown',
+		description:
+			'Markdown bullet links to each star list map of content (empty when maps of content are off)',
 	},
 	{ name: 'is_private', description: 'Whether the repository is private (true/false)' },
 	{ name: 'is_fork', description: 'Whether the repository is a fork (true/false)' },

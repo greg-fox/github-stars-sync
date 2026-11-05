@@ -110,9 +110,18 @@ Automatic syncs run quietly. If one fails, or finishes with errors or warnings (
 | **Create star list maps of content** | When enabled, creates one note per distinct GitHub star list found among your starred repositories |
 | **Destination folder** | Vault folder for star list map of content notes (default: `GitHub Stars/MOCs`) |
 | **Link star names to maps of content** | When enabled, `{{star_names}}` and `{{star_names_inline}}` in repository notes become `[[wikilinks]]` to the matching map of content note instead of plain text |
-| **Map of content template** | Markdown template for each map of content note, using `{{star_name}}` and `{{star_link}}` placeholders |
+| **Map of content template** | Markdown template for each map of content note, using `{{star_name}}`, `{{star_link}}`, and `{{notes_folder}}` placeholders |
 
 Sync only *creates* map of content notes that don't already exist; existing map of content notes are never overwritten, so manual edits are preserved.
+
+#### Listing repositories in a map of content
+
+A map of content lists its repositories by finding the repository notes that link to it. Two pieces make this work:
+
+1. **Repository notes link to their maps of content.** Include `{{star_mocs_markdown}}` in the body of the note template (the default template does). It renders one link per star list, for example `- [[GitHub Stars/MOCs/AI-ML|AI/ML]]`. `{{star_mocs}}` renders the same links as a YAML list for frontmatter. Both are empty when maps of content are off, and neither depends on **Link star names to maps of content**.
+2. **The map of content embeds a base.** The default map of content template includes a `base` code block that shows notes in `{{notes_folder}}` that link to the current note (`file.hasLink(this.file)`), sorted by `starred_at`.
+
+Existing repository notes pick up the links on the next sync when **Update existing notes** is on. Map of content notes created before this template existed are not changed; add a base like the one in the default template to them by hand.
 
 ## Template variables
 
@@ -141,6 +150,8 @@ Use these placeholders in the filename and note templates:
 | `{{star_names_inline}}` | Comma-separated star list names |
 | `{{star_links_inline}}` | Comma-separated star list URLs |
 | `{{star_lists_markdown}}` | Markdown bullet links to each star list |
+| `{{star_mocs}}` | Links to each star list map of content as a YAML list (empty when maps of content are off) |
+| `{{star_mocs_markdown}}` | Markdown bullet links to each star list map of content (empty when maps of content are off) |
 | `{{is_private}}` | `true` or `false` |
 | `{{is_fork}}` | `true` or `false` |
 | `{{archived}}` | `true` or `false` |

@@ -17,6 +17,25 @@ import { createRelocatedNoteFinder } from './noteTracking';
  * such as macOS and Windows), that folder's actual path is returned so sync
  * writes into the existing folder instead of failing.
  */
+/**
+ * Returns the path of an existing folder that matches `folderPath`
+ * (ignoring case), or the normalized path when no such folder exists yet.
+ * Never creates anything. Used to build links that match the real casing
+ * of a folder on case-insensitive file systems.
+ */
+export function resolveFolderPath(vault: Vault, folderPath: string): string {
+	const normalizedPath = normalizePath(folderPath);
+	if (!normalizedPath || normalizedPath === '/') {
+		return '';
+	}
+
+	try {
+		return findExistingFolderPath(vault, normalizedPath) ?? normalizedPath;
+	} catch {
+		return normalizedPath;
+	}
+}
+
 export async function ensureFolderExists(
 	vault: Vault,
 	folderPath: string,
@@ -141,6 +160,9 @@ export async function writeRepositoryNotes(
 
 	const nextRepoNotes = { ...repoNotes };
 	const notesFolder = await ensureFolderExists(vault, settings.notesFolder);
+	const mocFolder = settings.mocEnabled
+		? resolveFolderPath(vault, settings.mocDestinationFolder)
+		: settings.mocDestinationFolder;
 
 	// Paths already owned by a repository. A repository may only write to a
 	// path it owns, so two repositories can never share (and overwrite) the
@@ -194,7 +216,8 @@ export async function writeRepositoryNotes(
 			);
 			const content = renderTemplate(settings.noteTemplate, repository, {
 				linkStarNamesToMoc: settings.mocEnabled && settings.mocLinkStarNames,
-				mocFolder: settings.mocDestinationFolder,
+				mocFolder,
+				mocEnabled: settings.mocEnabled,
 				syncedAt: options.syncedAt,
 			});
 

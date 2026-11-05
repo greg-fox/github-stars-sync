@@ -24,6 +24,12 @@ export interface RenderTemplateOptions {
 	mocFolder?: string;
 	/** ISO 8601 time of the sync that rendered the note. */
 	syncedAt?: string;
+	/**
+	 * Whether star list MOC notes are generated. When false, the
+	 * `star_mocs` variables render empty so they never point at notes that
+	 * do not exist.
+	 */
+	mocEnabled?: boolean;
 }
 
 /**
@@ -58,6 +64,12 @@ export function renderTemplate(
 	const starNames = (repository.starLists ?? []).map((list) =>
 		linkStarNamesToMoc ? mocWikilink(options.mocFolder ?? '', list) : list.name,
 	);
+
+	const mocLinks = options.mocEnabled
+		? (repository.starLists ?? []).map((list) =>
+				mocWikilink(options.mocFolder ?? '', list),
+			)
+		: [];
 
 	const replacements: Record<string, string> = {
 		name: repository.name ?? '',
@@ -94,6 +106,8 @@ export function renderTemplate(
 			(repository.starLists ?? []).map((list) => list.url),
 		),
 		star_lists_markdown: formatStarListsMarkdown(repository.starLists ?? []),
+		star_mocs: formatYamlStringList(mocLinks),
+		star_mocs_markdown: mocLinks.map((link) => `- ${link}`).join('\n'),
 	};
 
 	return applyReplacements(template, replacements);
@@ -107,13 +121,20 @@ export function renderFilename(
 	return sanitizeFilename(rendered);
 }
 
+export interface RenderMocTemplateOptions {
+	/** Vault folder that holds repository notes. */
+	notesFolder?: string;
+}
+
 export function renderMocTemplate(
 	template: string,
 	starList: StarListEntry,
+	options: RenderMocTemplateOptions = {},
 ): string {
 	const replacements: Record<string, string> = {
 		star_name: starList.name ?? '',
 		star_link: starList.url ?? '',
+		notes_folder: options.notesFolder ?? '',
 	};
 
 	return applyReplacements(template, replacements);

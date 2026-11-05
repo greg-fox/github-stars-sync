@@ -89,3 +89,22 @@ Sync only creates MOC notes that do not already exist. Unlike repository notes (
 ### Linking repository notes to MOCs
 
 The existing `{{star_names}}` and `{{star_names_inline}}` template variables are reused rather than adding new ones. When **Link star names to maps of content** is enabled, each star name is wrapped as `[[name]]` before being formatted into the YAML list / inline string. `{{star_lists_markdown}}` (which links out to GitHub) is intentionally left unchanged, since it serves a different purpose (an external reference, not a vault-internal MOC link).
+
+## 2026-11-05: Deleted notes are recreated (known issue)
+
+### Behaviour
+
+When a repository note recorded in `repoNotes` no longer exists in the vault, sync treats the repository as unmapped and creates the note again. A user who deletes a note for a repository that is still starred will see it return on the next sync.
+
+### Decision
+
+This is documented as a known issue and left unchanged. The plugin is meant to be a backup of the user's GitHub stars, with GitHub as the source of truth. Recreating missing notes keeps the vault consistent with GitHub and repairs notes lost by accident (for example through sync conflicts or bulk deletes).
+
+### Alternatives considered
+
+- **Treat a missing mapped note as a deliberate deletion and skip it.** Rejected for now, because an accidental loss would then leave the backup silently incomplete.
+- **Maintain an ignore list of repository IDs.** Possible future enhancement if users need to exclude starred repositories from the vault without unstarring them.
+
+### Workaround
+
+Unstar the repository on GitHub, then delete the note.

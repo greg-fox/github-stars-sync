@@ -131,6 +131,14 @@ Use these placeholders in the filename and note templates:
 
 Star list links use GitHub’s public list URLs, for example `https://github.com/stars/<username>/lists/<slug>`.
 
+## Known issues
+
+### Deleted repository notes are recreated on the next sync
+
+This plugin treats GitHub as the source of truth and keeps a backup of your starred repositories in the vault. If you delete a repository note while the repository is still starred on GitHub, the next sync (manual or automatic) recreates it.
+
+To remove a repository from the vault permanently, unstar it on GitHub first, then delete the note.
+
 ## Documentation
 
 Design notes and architecture details live in the [`docs/`](docs/) folder.

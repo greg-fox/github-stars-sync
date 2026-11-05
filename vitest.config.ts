@@ -13,7 +13,7 @@ export default defineConfig({
 		coverage: {
 			provider: 'v8',
 			include: ['src/**/*.ts'],
-			exclude: ['src/main.ts', 'src/ui/**', 'src/obsidian-api.d.ts'],
+			exclude: ['src/main.ts', 'src/ui/**'],
 		},
 	},
 });

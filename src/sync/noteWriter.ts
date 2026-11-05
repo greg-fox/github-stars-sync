@@ -202,7 +202,7 @@ export async function writeRepositoryNotes(
 			return;
 		}
 
-		await vault.modify(file, content);
+		await vault.process(file, () => content);
 		result.updated++;
 	};
 

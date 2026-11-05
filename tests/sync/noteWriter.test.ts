@@ -47,8 +47,10 @@ function createVaultMock(options?: {
 			createdPaths.push(path);
 			return { path } as TFile;
 		}),
-		modify: vi.fn(async (file: TFile, content: string) => {
+		process: vi.fn(async (file: TFile, fn: (data: string) => string) => {
+			const content = fn('');
 			modified.push({ path: file.path, content });
+			return content;
 		}),
 	} as unknown as Vault;
 
@@ -132,8 +134,10 @@ function createStatefulVault(files: Record<string, Record<string, unknown> | nul
 			created.push({ path, content });
 			return file;
 		}),
-		modify: vi.fn(async (file: TFile, content: string) => {
+		process: vi.fn(async (file: TFile, fn: (data: string) => string) => {
+			const content = fn('');
 			modified.push({ path: file.path, content });
+			return content;
 		}),
 	} as unknown as Vault;
 

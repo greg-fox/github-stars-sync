@@ -5,6 +5,8 @@ import {
 } from './settings';
 import { GithubStarsSyncSettingTab } from './ui/settingsTab';
 import {
+	formatBackgroundSyncIssues,
+	formatSyncFailure,
 	formatSyncNotice,
 	syncGithubStars,
 } from './sync/syncService';
@@ -130,7 +132,7 @@ export default class GithubStarsSyncPlugin extends Plugin {
 		await this.saveSettings();
 	}
 
-		async runSync(options: { showNotice: boolean }): Promise<void> {
+	async runSync(options: { showNotice: boolean }): Promise<void> {
 		if (this.syncInProgress) {
 			if (options.showNotice) {
 				new Notice('GitHub stars sync is already running.');
@@ -157,6 +159,12 @@ export default class GithubStarsSyncPlugin extends Plugin {
 						: notice,
 					8000,
 				);
+			} else {
+				// Background syncs stay quiet unless something went wrong.
+				const failureNotice = formatBackgroundSyncIssues(outcome.result);
+				if (failureNotice) {
+					new Notice(failureNotice, 10000);
+				}
 			}
 		} catch (error) {
 			const message =
@@ -167,9 +175,10 @@ export default class GithubStarsSyncPlugin extends Plugin {
 			};
 			await this.saveSettings();
 
-			if (options.showNotice) {
-				new Notice(message, 8000);
-			}
+			new Notice(
+				options.showNotice ? message : formatSyncFailure(message),
+				options.showNotice ? 8000 : 10000,
+			);
 		} finally {
 			this.syncInProgress = false;
 		}

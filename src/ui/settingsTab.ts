@@ -16,7 +16,10 @@ import {
 	DEFAULT_SETTINGS,
 	normalizeSyncIntervalHours,
 } from '../settings';
-import { fetchAuthenticatedUser } from '../github/client';
+import {
+	classifyGithubError,
+	fetchAuthenticatedUser,
+} from '../github/client';
 import { getPatFromSecretStorage, hasSecretStorage } from '../secrets';
 
 export class GithubStarsSyncSettingTab extends PluginSettingTab {
@@ -77,11 +80,7 @@ export class GithubStarsSyncSettingTab extends PluginSettingTab {
 									`Connected to GitHub as ${user.login}.`,
 								);
 							} catch (error) {
-								const message =
-									error instanceof Error
-										? error.message
-										: 'Token test failed.';
-								new Notice(message, 8000);
+								new Notice(classifyGithubError(error), 8000);
 							} finally {
 								button.setDisabled(false);
 							}

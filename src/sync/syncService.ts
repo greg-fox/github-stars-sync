@@ -49,10 +49,7 @@ export async function syncGithubStars(
 				membership,
 			);
 		} catch (error) {
-			const message =
-				error instanceof Error
-					? error.message
-					: 'Failed to fetch GitHub star lists.';
+			const message = classifyGithubError(error);
 			warnings.push(
 				`Star list metadata was not synced: ${message}. Notes were still created from starred repositories.`,
 			);

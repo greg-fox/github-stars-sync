@@ -1,6 +1,6 @@
 import { requestUrl, type RequestUrlResponse } from 'obsidian';
 import { GITHUB_API_BASE } from '../constants';
-import { GithubApiError } from './client';
+import { assertOkResponse } from './client';
 
 export interface GraphQlError {
 	message: string;
@@ -19,6 +19,7 @@ export async function graphqlRequest<T>(
 	const response = await requestUrl({
 		url: `${GITHUB_API_BASE}/graphql`,
 		method: 'POST',
+		throw: false,
 		headers: {
 			Authorization: `Bearer ${token}`,
 			Accept: 'application/json',
@@ -43,12 +44,6 @@ export async function graphqlRequest<T>(
 function parseGraphQlResponse<T>(
 	response: RequestUrlResponse,
 ): GraphQlResponse<T> {
-	if (response.status < 200 || response.status >= 300) {
-		throw new GithubApiError(
-			`GitHub GraphQL request failed with status ${response.status}`,
-			response.status,
-		);
-	}
-
+	assertOkResponse(response, 'GitHub GraphQL request');
 	return response.json as GraphQlResponse<T>;
 }

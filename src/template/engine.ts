@@ -1,13 +1,50 @@
+import { normalizePath } from 'obsidian';
 import type { GithubRepository, StarListEntry } from '../types';
 
-const INVALID_FILENAME_CHARS = /[<>:"/\\|?*]/g;
+// Characters that are invalid in file names on common file systems, plus
+// characters that break Obsidian wikilinks (# ^ [ ] |), plus control chars.
+// eslint-disable-next-line no-control-regex
+const INVALID_FILENAME_CHARS = /[<>:"/\\|?*#^[\]\u0000-\u001f]/g;
 
-export function sanitizeFilename(name: string): string {
-	return name.replace(INVALID_FILENAME_CHARS, '-').trim();
+export function sanitizeFilename(name: string, fallback = 'Untitled'): string {
+	const sanitized = name
+		.replace(INVALID_FILENAME_CHARS, '-')
+		.trim()
+		// Leading dots hide the file from Obsidian; trailing dots and spaces
+		// are stripped by Windows.
+		.replace(/^\.+/, '')
+		.replace(/[.\s]+$/, '');
+
+	return sanitized || fallback;
 }
 
 export interface RenderTemplateOptions {
 	linkStarNamesToMoc?: boolean;
+	/** Vault folder that holds star list MOC notes, used to build wikilinks. */
+	mocFolder?: string;
+}
+
+/**
+ * Vault path (without extension) of the MOC note for a star list. Matches
+ * the path that {@link writeStarListMocs} creates.
+ */
+export function mocNotePath(folder: string, starList: StarListEntry): string {
+	const filename = renderMocFilename(starList);
+	const normalizedFolder = normalizePath(folder ?? '');
+	return normalizedFolder && normalizedFolder !== '/'
+		? normalizePath(`${normalizedFolder}/${filename}`)
+		: filename;
+}
+
+/**
+ * Wikilink to a star list's MOC note. Links by full path so the link
+ * resolves to the MOC even when the list name contains characters that
+ * are sanitized out of the file name, or another note shares the name.
+ */
+export function mocWikilink(folder: string, starList: StarListEntry): string {
+	const alias = (starList.name ?? '').replace(/[[\]|]/g, '').trim();
+	const target = mocNotePath(folder, starList);
+	return alias && alias !== target ? `[[${target}|${alias}]]` : `[[${target}]]`;
 }
 
 export function renderTemplate(
@@ -17,7 +54,7 @@ export function renderTemplate(
 ): string {
 	const linkStarNamesToMoc = options.linkStarNamesToMoc ?? false;
 	const starNames = (repository.starLists ?? []).map((list) =>
-		linkStarNamesToMoc ? `[[${list.name}]]` : list.name,
+		linkStarNamesToMoc ? mocWikilink(options.mocFolder ?? '', list) : list.name,
 	);
 
 	const replacements: Record<string, string> = {
@@ -85,7 +122,10 @@ export function renderMocTemplate(
 }
 
 export function renderMocFilename(starList: StarListEntry): string {
-	return sanitizeFilename(starList.name ?? '');
+	return sanitizeFilename(
+		starList.name ?? '',
+		sanitizeFilename(starList.slug ?? '', 'Star list'),
+	);
 }
 
 function formatTopicsYaml(topics: string[]): string {

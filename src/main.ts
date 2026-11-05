@@ -1,4 +1,4 @@
-import { Notice, Plugin } from 'obsidian';
+import { debounce, Notice, Plugin } from 'obsidian';
 import {
 	normalizeSettings,
 	type GithubStarsSyncSettings,
@@ -49,15 +49,19 @@ export default class GithubStarsSyncPlugin extends Plugin {
 		);
 		this.refreshSyncInterval();
 
+		// Registered once so the active interval is always cleared on unload,
+		// however many times it has been replaced.
+		this.register(() => {
+			this.scheduleSyncIntervalRefresh.cancel();
+			this.stopSyncInterval();
+		});
+
 		if (this.settings.autoSync) {
-			window.setTimeout(() => {
+			const startupSyncId = window.setTimeout(() => {
 				void this.runSync({ showNotice: false });
 			}, 5000);
+			this.register(() => window.clearTimeout(startupSyncId));
 		}
-	}
-
-	onunload() {
-		this.refreshSyncInterval(true);
 	}
 
 	async loadSettings() {
@@ -89,10 +93,10 @@ export default class GithubStarsSyncPlugin extends Plugin {
 		}
 	}
 
-	refreshSyncInterval(clearOnly = false): void {
+	refreshSyncInterval(): void {
 		this.stopSyncInterval();
 
-		if (clearOnly || !this.settings.autoSync) {
+		if (!this.settings.autoSync) {
 			return;
 		}
 
@@ -100,8 +104,17 @@ export default class GithubStarsSyncPlugin extends Plugin {
 		this.activeSyncIntervalId = window.setInterval(() => {
 			void this.runSync({ showNotice: false });
 		}, intervalMs);
-		this.registerInterval(this.activeSyncIntervalId);
 	}
+
+	/**
+	 * Restarts the sync interval once input settles, so typing a value such
+	 * as "12" does not briefly schedule a 1 hour interval.
+	 */
+	readonly scheduleSyncIntervalRefresh = debounce(
+		() => this.refreshSyncInterval(),
+		1000,
+		true,
+	);
 
 	private async handleRename(newPath: string, oldPath: string): Promise<void> {
 		const repoNotes = applyRenameToRepoNotes(

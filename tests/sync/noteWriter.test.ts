@@ -456,7 +456,6 @@ describe('ensureFolderExists', () => {
 			createFolder: vi.fn(async () => {
 				throw new Error('Folder already exists.');
 			}),
-			adapter: { exists: vi.fn(async () => true) },
 		} as unknown as Vault;
 
 		await expect(ensureFolderExists(vault, 'GitHub Stars')).resolves.toBe(
@@ -485,7 +484,6 @@ describe('ensureFolderExists', () => {
 			createFolder: vi.fn(async () => {
 				throw new Error('Disk full');
 			}),
-			adapter: { exists: vi.fn(async () => false) },
 		} as unknown as Vault;
 
 		await expect(ensureFolderExists(vault, 'GitHub Stars')).rejects.toThrow(

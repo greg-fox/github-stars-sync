@@ -11,6 +11,17 @@
 - Quote and escape all YAML list items; add `{{description_yaml}}`
 - Document that deleted repository notes are recreated on the next sync
 - Fix a doubled period in the star list warning
+- Track renamed and moved repository notes and folders instead of creating duplicates; find relocated notes by frontmatter during sync
+- Show a notice when an automatic sync fails or finishes with errors or warnings
+- Add `{{star_mocs}}` and `{{star_mocs_markdown}}` links from repository notes to their maps of content, and `{{notes_folder}}` for map of content templates
+- The default map of content template embeds a base that lists the repositories linking to it
+- Add `{{archived}}`, `{{homepage}}`, `{{license}}`, `{{default_branch}}`, and `{{synced_at}}` template variables
+- Refresh the settings tab after **Sync now** so the last sync time and error are current
+- Update existing notes with `Vault.process`, and use only the Vault API when checking for existing folders
+- Clean up the startup sync timer and the sync interval when the plugin unloads; debounce interval changes from settings
+- Remove the redundant `obsidian-api.d.ts` declarations and the unreachable secret storage fallback
+- Replace em dashes in settings text
+- Update the license holder, document network use and privacy in the README, and verify tag and version in the release workflow
 
 ## 2026-07-25T00:00:00Z
 

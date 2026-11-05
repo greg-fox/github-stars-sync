@@ -47,6 +47,10 @@ export const TEMPLATE_VARIABLES = [
 	{ name: 'full_name', description: 'Owner and repository name (owner/repo)' },
 	{ name: 'owner', description: 'Repository owner login' },
 	{ name: 'description', description: 'Repository description' },
+	{
+		name: 'description_yaml',
+		description: 'Repository description as a quoted, escaped YAML string for frontmatter',
+	},
 	{ name: 'language', description: 'Primary programming language' },
 	{ name: 'url', description: 'Repository URL on GitHub' },
 	{ name: 'id', description: 'GitHub repository ID' },

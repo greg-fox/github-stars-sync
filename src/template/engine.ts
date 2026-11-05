@@ -25,6 +25,7 @@ export function renderTemplate(
 		full_name: repository.full_name ?? '',
 		owner: repository.owner?.login ?? '',
 		description: repository.description ?? '',
+		description_yaml: toYamlString(repository.description ?? ''),
 		language: repository.language ?? '',
 		url: repository.html_url ?? '',
 		id: String(repository.id ?? ''),
@@ -97,15 +98,17 @@ function formatYamlStringList(values: string[]): string {
 		return '[]';
 	}
 
-	return `\n${values.map((value) => `  - ${escapeYamlString(value)}`).join('\n')}`;
+	return `\n${values.map((value) => `  - ${toYamlString(value)}`).join('\n')}`;
 }
 
-function escapeYamlString(value: string): string {
-	if (/[:#"'[\]{}&,*?|>!%@`]|^\s|\s$/.test(value)) {
-		return `"${value.replace(/"/g, '\\"')}"`;
-	}
-
-	return value;
+/**
+ * Formats a value as a YAML double-quoted scalar. Every value is quoted so
+ * strings such as `2024`, `true`, `null`, `yes`, or `- x` stay strings, and
+ * JSON string escaping is valid YAML double-quoted escaping (backslashes,
+ * quotes, and control characters included).
+ */
+export function toYamlString(value: string): string {
+	return JSON.stringify(value);
 }
 
 function formatInlineList(values: string[]): string {

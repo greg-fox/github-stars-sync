@@ -4,6 +4,7 @@ import {
 	renderMocFilename,
 	renderMocTemplate,
 	renderTemplate,
+	toYamlString,
 } from '../../src/template/engine';
 import type { GithubRepository, StarListEntry } from '../../src/types';
 
@@ -62,7 +63,7 @@ describe('renderTemplate', () => {
 			},
 		);
 
-		expect(rendered).toContain('- Obsidian');
+		expect(rendered).toContain('- "Obsidian"');
 		expect(rendered).toContain(
 			'https://github.com/stars/octocat/lists/obsidian',
 		);
@@ -71,8 +72,8 @@ describe('renderTemplate', () => {
 
 	it('formats topics as YAML', () => {
 		const rendered = renderTemplate('topics: {{topics}}', sampleRepository);
-		expect(rendered).toContain('- obsidian');
-		expect(rendered).toContain('- plugin');
+		expect(rendered).toContain('- "obsidian"');
+		expect(rendered).toContain('- "plugin"');
 	});
 
 	it('wraps star names in wikilinks when MOC linking is enabled', () => {
@@ -114,6 +115,55 @@ describe('renderTemplate', () => {
 		);
 
 		expect(rendered).toBe('inline: Obsidian');
+	});
+});
+
+describe('YAML formatting', () => {
+	it('quotes list items that YAML would otherwise parse as non-strings', () => {
+		const rendered = renderTemplate('names: {{star_names}}', {
+			...sampleRepository,
+			starLists: ['2024', 'true', 'null', 'yes', '- dash', '~'].map(
+				(name) => ({ name, slug: name, url: `https://example.com/${name}` }),
+			),
+		});
+
+		expect(rendered).toBe(
+			[
+				'names: ',
+				'  - "2024"',
+				'  - "true"',
+				'  - "null"',
+				'  - "yes"',
+				'  - "- dash"',
+				'  - "~"',
+			].join('\n'),
+		);
+	});
+
+	it('escapes backslashes, quotes, and control characters', () => {
+		const value = 'C:\\path "quoted"\nnext\tend';
+		const quoted = toYamlString(value);
+
+		expect(quoted).toBe('"C:\\\\path \\"quoted\\"\\nnext\\tend"');
+		expect(JSON.parse(quoted)).toBe(value);
+	});
+
+	it('provides a YAML-safe description variable', () => {
+		const rendered = renderTemplate('description: {{description_yaml}}', {
+			...sampleRepository,
+			description: 'Fast: "tiny" \\ # parser',
+		});
+
+		expect(rendered).toBe('description: "Fast: \\"tiny\\" \\\\ # parser"');
+	});
+
+	it('renders an empty YAML string for a missing description', () => {
+		expect(
+			renderTemplate('description: {{description_yaml}}', {
+				...sampleRepository,
+				description: null,
+			}),
+		).toBe('description: ""');
 	});
 });
 

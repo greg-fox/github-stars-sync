@@ -36,12 +36,20 @@ flowchart TD
   E --> F[Fetch star list membership via GraphQL]
   F --> G[Merge list metadata onto repos]
   G --> H[Render templates per repository]
-  H --> I{Note exists?}
-  I -- No --> J[Create note]
+  H --> I{Mapped note exists and<br/>not owned by another repo?}
   I -- Yes --> K{Update existing enabled?}
+  I -- No --> T{File at rendered path?}
+  T -- No --> J[Create note]
+  T -- Yes --> U{Frontmatter github_id, id,<br/>or url matches repo?}
+  U -- Yes --> K
+  U -- No --> V{File at path-repo-id?}
+  V -- No --> J
+  V -- Yes, matching --> K
+  V -- Yes, not matching --> W[Report error, write nothing]
   K -- No --> L[Skip]
   K -- Yes --> M[Modify note]
   J --> N{MOCs enabled?}
+  W --> N
   M --> N
   L --> N
   N -- No --> S[Save sync state]
@@ -59,6 +67,10 @@ Plugin `data.json` contains:
 
 - User settings (folder, templates, sync interval, secret name)
 - Sync state (`lastSyncTime`, `lastSyncError`, `repoNotes` map)
+
+## Note ownership
+
+`repoNotes` maps each repository ID to the note path it owns. During a sync a path can belong to only one repository, so colliding filenames never overwrite each other. An existing note that is not in `repoNotes` is adopted only when its frontmatter `github_id`, `id`, or `url` identifies the same repository; otherwise the note is created as `<filename>-<repository id>.md`.
 
 Secrets are stored separately by Obsidian and are not part of `data.json`.
 

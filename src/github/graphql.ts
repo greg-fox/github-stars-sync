@@ -1,9 +1,10 @@
 import { requestUrl, type RequestUrlResponse } from 'obsidian';
 import { GITHUB_API_BASE } from '../constants';
-import { assertOkResponse } from './client';
+import { assertOkResponse, GithubApiError } from './client';
 
 export interface GraphQlError {
 	message: string;
+	type?: string;
 }
 
 export interface GraphQlResponse<T> {
@@ -31,7 +32,13 @@ export async function graphqlRequest<T>(
 
 	const payload = parseGraphQlResponse<T>(response);
 	if (payload.errors?.length) {
-		throw new Error(payload.errors.map((error) => error.message).join('; '));
+		const message = payload.errors.map((error) => error.message).join('; ');
+		// GitHub reports GraphQL rate limiting as HTTP 200 with an error of
+		// type RATE_LIMITED rather than a 403/429 status.
+		if (payload.errors.some((error) => error.type === 'RATE_LIMITED')) {
+			throw new GithubApiError(message, response.status, true);
+		}
+		throw new Error(message);
 	}
 
 	if (!payload.data) {

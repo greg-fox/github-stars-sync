@@ -183,6 +183,7 @@ export async function writeRepositoryNotes(
 			);
 			const content = renderTemplate(settings.noteTemplate, repository, {
 				linkStarNamesToMoc: settings.mocEnabled && settings.mocLinkStarNames,
+				mocFolder: settings.mocDestinationFolder,
 			});
 
 			const mappedPath = nextRepoNotes[repoKey];

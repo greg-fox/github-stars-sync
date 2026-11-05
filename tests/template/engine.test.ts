@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+	mocWikilink,
 	renderFilename,
 	renderMocFilename,
 	renderMocTemplate,
 	renderTemplate,
+	sanitizeFilename,
 } from '../../src/template/engine';
 import type { GithubRepository, StarListEntry } from '../../src/types';
 
@@ -173,7 +175,69 @@ describe('renderMocTemplate', () => {
 	});
 });
 
+describe('MOC wikilinks', () => {
+	it('links to the MOC note by full path with the list name as alias', () => {
+		expect(mocWikilink('GitHub Stars/MOCs', starListEntry)).toBe(
+			'[[GitHub Stars/MOCs/Obsidian|Obsidian]]',
+		);
+	});
+
+	it('links to the sanitized MOC filename when the list name has special characters', () => {
+		expect(
+			mocWikilink('GitHub Stars/MOCs', { ...starListEntry, name: 'AI/ML' }),
+		).toBe('[[GitHub Stars/MOCs/AI-ML|AI/ML]]');
+		expect(
+			mocWikilink('MOCs', { ...starListEntry, name: 'Tools: CLI #1' }),
+		).toBe('[[MOCs/Tools- CLI -1|Tools: CLI #1]]');
+	});
+
+	it('strips characters from the alias that would break the link', () => {
+		expect(
+			mocWikilink('MOCs', { ...starListEntry, name: 'a|b [c]' }),
+		).toBe('[[MOCs/a-b -c-|ab c]]');
+	});
+
+	it('omits the folder when the MOC folder is the vault root', () => {
+		expect(mocWikilink('', starListEntry)).toBe('[[Obsidian]]');
+		expect(mocWikilink('/', starListEntry)).toBe('[[Obsidian]]');
+	});
+
+	it('uses MOC wikilinks in rendered star names', () => {
+		const rendered = renderTemplate(
+			'{{star_names_inline}}\n{{star_names}}',
+			{
+				...sampleRepository,
+				starLists: [{ ...starListEntry, name: 'AI/ML' }],
+			},
+			{ linkStarNamesToMoc: true, mocFolder: 'GitHub Stars/MOCs' },
+		);
+
+		expect(rendered).toContain('[[GitHub Stars/MOCs/AI-ML|AI/ML]]');
+		expect(rendered).toContain('- "[[GitHub Stars/MOCs/AI-ML|AI/ML]]"');
+	});
+});
+
+describe('sanitizeFilename', () => {
+	it('replaces characters that break Obsidian links', () => {
+		expect(sanitizeFilename('a#b^c[d]e|f')).toBe('a-b-c-d-e-f');
+	});
+
+	it('removes leading dots and trailing dots or spaces', () => {
+		expect(sanitizeFilename('.github')).toBe('github');
+		expect(sanitizeFilename('name. . ')).toBe('name');
+	});
+
+	it('falls back when nothing usable remains', () => {
+		expect(sanitizeFilename('')).toBe('Untitled');
+		expect(sanitizeFilename('...', 'fallback')).toBe('fallback');
+	});
+});
+
 describe('renderMocFilename', () => {
+	it('falls back to the slug when the list name is empty', () => {
+		expect(renderMocFilename({ ...starListEntry, name: '' })).toBe('obsidian');
+	});
+
 	it('sanitizes invalid filename characters from the star list name', () => {
 		expect(
 			renderMocFilename({ ...starListEntry, name: 'Dev/Ops Tools' }),

@@ -101,6 +101,8 @@ The plugin only writes to notes it created, or to existing notes whose frontmatt
 
 You can also run **Sync GitHub stars now** from the command palette or click the star ribbon icon.
 
+Automatic syncs run quietly. If one fails, or finishes with errors or warnings (for example, star lists could not be fetched), a notice shows what went wrong.
+
 ### Maps of content
 
 | Setting | Description |

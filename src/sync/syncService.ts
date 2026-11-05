@@ -125,3 +125,32 @@ export function formatSyncNotice(result: SyncResult): string {
 
 	return `GitHub stars sync complete: ${parts.join(', ')}.`;
 }
+
+/**
+ * Notice text for a sync that failed outright, shown even when the sync
+ * ran in the background so a broken token or network problem is noticed.
+ */
+export function formatSyncFailure(message: string): string {
+	return `GitHub stars sync failed: ${message}`;
+}
+
+/**
+ * Notice text for a background sync that completed with errors or
+ * warnings, or `null` when it completed cleanly.
+ */
+export function formatBackgroundSyncIssues(result: SyncResult): string | null {
+	if (result.errors.length === 0 && result.warnings.length === 0) {
+		return null;
+	}
+
+	const lines: string[] = [];
+	if (result.errors.length > 0) {
+		const count = result.errors.length;
+		lines.push(
+			`GitHub stars sync finished with ${count} ${count === 1 ? 'error' : 'errors'}. First error: ${result.errors[0]}`,
+		);
+	}
+	lines.push(...result.warnings);
+
+	return lines.join('\n');
+}

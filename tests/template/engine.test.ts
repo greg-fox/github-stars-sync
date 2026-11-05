@@ -117,7 +117,50 @@ describe('renderTemplate', () => {
 	});
 });
 
+describe('renderTemplate placeholder safety', () => {
+	it('does not expand placeholders that appear inside substituted values', () => {
+		const rendered = renderTemplate('{{description}} | {{url}}', {
+			...sampleRepository,
+			description: 'Use {{url}} and {{star_lists_markdown}} here',
+		});
+
+		expect(rendered).toBe(
+			'Use {{url}} and {{star_lists_markdown}} here | https://github.com/owner/demo',
+		);
+	});
+
+	it('leaves unknown placeholders untouched', () => {
+		expect(renderTemplate('{{nope}} {{name}}', sampleRepository)).toBe(
+			'{{nope}} demo',
+		);
+	});
+
+	it('does not resolve inherited object properties as placeholders', () => {
+		expect(renderTemplate('{{constructor}} {{toString}}', sampleRepository)).toBe(
+			'{{constructor}} {{toString}}',
+		);
+	});
+
+	it('does not interpret replacement patterns in values', () => {
+		expect(
+			renderTemplate('{{description}}', {
+				...sampleRepository,
+				description: "costs $& and $' and $1",
+			}),
+		).toBe("costs $& and $' and $1");
+	});
+});
+
 describe('renderMocTemplate', () => {
+	it('does not expand placeholders inside a star list name', () => {
+		expect(
+			renderMocTemplate('{{star_name}} {{star_link}}', {
+				...starListEntry,
+				name: '{{star_link}}',
+			}),
+		).toBe('{{star_link}} https://github.com/stars/octocat/lists/obsidian');
+	});
+
 	it('replaces star_name and star_link placeholders', () => {
 		const rendered = renderMocTemplate(
 			'# {{star_name}}\n[Open]({{star_link}})',

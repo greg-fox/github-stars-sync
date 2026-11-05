@@ -51,12 +51,7 @@ export function renderTemplate(
 		star_lists_markdown: formatStarListsMarkdown(repository.starLists ?? []),
 	};
 
-	let rendered = template;
-	for (const [key, value] of Object.entries(replacements)) {
-		rendered = rendered.replaceAll(`{{${key}}}`, value);
-	}
-
-	return rendered;
+	return applyReplacements(template, replacements);
 }
 
 export function renderFilename(
@@ -76,12 +71,7 @@ export function renderMocTemplate(
 		star_link: starList.url ?? '',
 	};
 
-	let rendered = template;
-	for (const [key, value] of Object.entries(replacements)) {
-		rendered = rendered.replaceAll(`{{${key}}}`, value);
-	}
-
-	return rendered;
+	return applyReplacements(template, replacements);
 }
 
 export function renderMocFilename(starList: StarListEntry): string {
@@ -120,4 +110,23 @@ function formatStarListsMarkdown(starLists: StarListEntry[]): string {
 	return starLists
 		.map((list) => `- [${list.name}](${list.url})`)
 		.join('\n');
+}
+
+const PLACEHOLDER_PATTERN = /\{\{(\w+)\}\}/g;
+
+/**
+ * Substitutes every `{{key}}` placeholder in a single pass, so placeholder
+ * text inside substituted values (for example a repository description
+ * containing `{{url}}`) is emitted literally instead of being expanded.
+ * Unknown placeholders are left untouched.
+ */
+function applyReplacements(
+	template: string,
+	replacements: Record<string, string>,
+): string {
+	return template.replace(PLACEHOLDER_PATTERN, (match, key: string) =>
+		Object.prototype.hasOwnProperty.call(replacements, key)
+			? (replacements[key] ?? match)
+			: match,
+	);
 }

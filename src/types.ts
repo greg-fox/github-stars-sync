@@ -3,6 +3,12 @@ export interface GithubRepositoryOwner {
 	avatar_url?: string;
 }
 
+export interface GithubRepositoryLicense {
+	key?: string;
+	name?: string;
+	spdx_id?: string | null;
+}
+
 export interface StarListEntry {
 	name: string;
 	slug: string;
@@ -28,6 +34,10 @@ export interface GithubRepository {
 	forks_count: number;
 	open_issues_count: number;
 	topics: string[];
+	archived?: boolean;
+	homepage?: string | null;
+	license?: GithubRepositoryLicense | null;
+	default_branch?: string;
 	created_at: string;
 	updated_at: string;
 	pushed_at: string;

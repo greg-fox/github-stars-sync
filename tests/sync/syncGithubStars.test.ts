@@ -178,4 +178,33 @@ describe('syncGithubStars', () => {
 			'Star list metadata was not synced: Authentication failed. Check your personal access token. Notes were still created from starred repositories.',
 		]);
 	});
+
+	it('uses the same timestamp for synced_at and lastSyncTime', async () => {
+		const create = vi.fn(async (path: string, content: string) => ({ path, content }));
+		const app = {
+			secretStorage: {
+				getSecret: vi.fn().mockReturnValue('ghp_test'),
+			},
+			vault: {
+				getAbstractFileByPath: vi.fn().mockReturnValue(null),
+				getAllLoadedFiles: vi.fn(() => []),
+				createFolder: vi.fn(async () => undefined),
+				create,
+				process: vi.fn(),
+			},
+		} as unknown as App;
+
+		const outcome = await syncGithubStars(app, {
+			settings: { ...DEFAULT_SETTINGS, noteTemplate: '{{synced_at}}' },
+			syncState: {
+				lastSyncTime: null,
+				lastSyncError: null,
+				repoNotes: {},
+			},
+		});
+
+		expect(create.mock.calls[0]?.[1]).toBe(outcome.syncState.lastSyncTime);
+		expect(outcome.syncState.lastSyncTime).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+	});
 });
+

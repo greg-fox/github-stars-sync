@@ -8,6 +8,7 @@ import {
 import type { GithubRepository, SyncResult } from '../types';
 import { renderFilename, renderTemplate } from '../template/engine';
 import type { GithubStarsSyncSettings } from '../settings';
+import { createRelocatedNoteFinder } from './noteTracking';
 
 /**
  * Makes sure `folderPath` exists in the vault and returns the path that
@@ -70,9 +71,10 @@ function findExistingFolderPath(vault: Vault, path: string): string | null {
 
 export interface WriteRepositoryNotesOptions {
 	/**
-	 * Used to read frontmatter of a file that already exists at a note's
-	 * target path, so the plugin only adopts files that belong to the same
-	 * repository. Without it, unmapped existing files are never adopted.
+	 * Used to read frontmatter so the plugin only adopts files that belong to
+	 * the same repository, and to find notes that were renamed or moved away
+	 * from their tracked path. Without it, unmapped existing files are never
+	 * adopted and relocated notes are not found.
 	 */
 	metadataCache?: MetadataCache;
 }
@@ -158,6 +160,12 @@ export async function writeRepositoryNotes(
 		nextRepoNotes[repoKey] = path;
 	};
 
+	const findRelocated = createRelocatedNoteFinder(
+		vault,
+		options.metadataCache,
+		notesFolder,
+	);
+
 	const writeExisting = async (
 		file: TFile,
 		repoKey: string,
@@ -192,6 +200,18 @@ export async function writeRepositoryNotes(
 				: null;
 			if (mappedFile instanceof TFile && isFreeFor(mappedFile.path, repoKey)) {
 				await writeExisting(mappedFile, repoKey, content);
+				continue;
+			}
+
+			// The note may have been renamed or moved while the plugin was not
+			// tracking it. Find it by frontmatter before creating a duplicate.
+			const relocated = findRelocated(repository).find(
+				(file) =>
+					isFreeFor(file.path, repoKey) &&
+					vault.getAbstractFileByPath(file.path) === file,
+			);
+			if (relocated) {
+				await writeExisting(relocated, repoKey, content);
 				continue;
 			}
 

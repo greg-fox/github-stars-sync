@@ -121,6 +121,7 @@ function createStatefulVault(files: Record<string, Record<string, unknown> | nul
 	const vault = {
 		getAbstractFileByPath: vi.fn((path: string) => byPath.get(path) ?? null),
 		getAllLoadedFiles: vi.fn(() => []),
+		getMarkdownFiles: vi.fn(() => [...byPath.values()]),
 		createFolder: vi.fn(async () => undefined),
 		create: vi.fn(async (path: string, content: string) => {
 			if (byPath.has(path)) {
@@ -490,5 +491,108 @@ describe('ensureFolderExists', () => {
 		await expect(ensureFolderExists(vault, 'GitHub Stars')).rejects.toThrow(
 			'Disk full',
 		);
+	});
+});
+
+describe('writeRepositoryNotes relocated notes', () => {
+	const settings = { ...DEFAULT_SETTINGS, noteTemplate: '{{full_name}}' };
+
+	it('updates a tracked note that was moved instead of creating a duplicate', async () => {
+		const { vault, metadataCache, created, modified } = createStatefulVault({
+			'Projects/demo renamed.md': { github_id: 99 },
+		});
+
+		const { result, repoNotes } = await writeRepositoryNotes(
+			vault,
+			settings,
+			[sampleRepository],
+			{ '99': 'GitHub Stars/owner-demo.md' },
+			true,
+			{ metadataCache },
+		);
+
+		expect(created).toHaveLength(0);
+		expect(modified).toEqual([
+			{ path: 'Projects/demo renamed.md', content: 'owner/demo' },
+		]);
+		expect(result.updated).toBe(1);
+		expect(repoNotes['99']).toBe('Projects/demo renamed.md');
+	});
+
+	it('re-tracks a moved note without modifying it when updates are disabled', async () => {
+		const { vault, metadataCache, created, modified } = createStatefulVault({
+			'Projects/demo renamed.md': { github_id: 99 },
+		});
+
+		const { result, repoNotes } = await writeRepositoryNotes(
+			vault,
+			settings,
+			[sampleRepository],
+			{ '99': 'GitHub Stars/owner-demo.md' },
+			false,
+			{ metadataCache },
+		);
+
+		expect(created).toHaveLength(0);
+		expect(modified).toHaveLength(0);
+		expect(result.skipped).toBe(1);
+		expect(repoNotes['99']).toBe('Projects/demo renamed.md');
+	});
+
+	it('does not adopt a note outside the notes folder that only matches by url', async () => {
+		const { vault, metadataCache, created, modified } = createStatefulVault({
+			'Journal/reading.md': { url: 'https://github.com/owner/demo' },
+		});
+
+		await writeRepositoryNotes(
+			vault,
+			settings,
+			[sampleRepository],
+			{ '99': 'GitHub Stars/owner-demo.md' },
+			true,
+			{ metadataCache },
+		);
+
+		expect(modified).toHaveLength(0);
+		expect(created.map((entry) => entry.path)).toEqual([
+			'GitHub Stars/owner-demo.md',
+		]);
+	});
+
+	it('does not adopt a matching note that another repository owns', async () => {
+		const { vault, metadataCache, created, modified } = createStatefulVault({
+			'GitHub Stars/other.md': { github_id: 99 },
+		});
+
+		await writeRepositoryNotes(
+			vault,
+			settings,
+			[sampleRepository],
+			{ '99': 'GitHub Stars/missing.md', '5': 'GitHub Stars/other.md' },
+			true,
+			{ metadataCache },
+		);
+
+		expect(modified).toHaveLength(0);
+		expect(created.map((entry) => entry.path)).toEqual([
+			'GitHub Stars/owner-demo.md',
+		]);
+	});
+
+	it('still recreates a deleted note when no relocated copy exists', async () => {
+		const { vault, metadataCache, created } = createStatefulVault({});
+
+		await writeRepositoryNotes(
+			vault,
+			settings,
+			[sampleRepository],
+			{ '99': 'GitHub Stars/owner-demo.md' },
+			true,
+			{ metadataCache },
+		);
+
+		expect(created.map((entry) => entry.path)).toEqual([
+			'GitHub Stars/owner-demo.md',
+		]);
 	});
 });

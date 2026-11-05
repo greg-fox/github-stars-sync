@@ -110,3 +110,29 @@ This is documented as a known issue and left unchanged. The plugin is meant to b
 ### Workaround
 
 Unstar the repository on GitHub, then delete the note.
+
+## 2026-11-05: Track renamed and moved notes
+
+### Problem
+
+`repoNotes` stores the path of each repository's note. When a user renamed or moved a note, the stored path no longer resolved, so the next sync created a fresh note at the rendered path and stopped updating the renamed one. Unlike a deletion, the user had not removed anything.
+
+### Decision
+
+Two complementary mechanisms:
+
+1. **Rename events.** The plugin listens to the vault `rename` event and rewrites matching `repoNotes` entries, including every tracked note inside a renamed or moved folder.
+2. **Frontmatter lookup during sync.** When a repository's tracked note is missing, sync looks for its note by frontmatter before creating a new one. This covers renames made while the plugin was disabled, renames that happen during a sync, and lost `data.json` files.
+
+### Matching rules
+
+- `github_id` matches anywhere in the vault, since it is a key this plugin writes.
+- `id` and `url` match only inside the notes folder, so unrelated notes that mention a repository URL (for example reading notes) are never adopted.
+- A match that another repository already owns is ignored.
+
+The frontmatter index is built lazily, at most once per sync, and only when a tracked note is missing or a repository has no tracked note.
+
+### Interaction with deleted notes
+
+Deleted notes are still recreated on the next sync, as documented in the known issues: if no note with matching frontmatter exists, the repository is treated as missing from the backup.
+

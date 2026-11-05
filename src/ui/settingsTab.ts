@@ -20,7 +20,7 @@ import {
 	classifyGithubError,
 	fetchAuthenticatedUser,
 } from '../github/client';
-import { getPatFromSecretStorage, hasSecretStorage } from '../secrets';
+import { getPatFromSecretStorage } from '../secrets';
 
 export class GithubStarsSyncSettingTab extends PluginSettingTab {
 	plugin: GithubStarsSyncPlugin;
@@ -38,61 +38,53 @@ export class GithubStarsSyncSettingTab extends PluginSettingTab {
 			.setName('GitHub authentication')
 			.setHeading();
 
-		if (hasSecretStorage(this.app)) {
-			new Setting(containerEl)
-				.setName('Personal access token')
-				.setDesc(
-					'Select or create a secret in Obsidian’s keychain. The token is stored outside plugin data.json.',
-				)
-				.addComponent((el) =>
-					new SecretComponent(this.app, el)
-						.setValue(this.plugin.settings.patSecretName)
-						.onChange(async (secretName) => {
-							this.plugin.settings.patSecretName =
-								secretName?.trim() || DEFAULT_SETTINGS.patSecretName;
-							await this.plugin.saveSettings();
-						}),
-				);
+		new Setting(containerEl)
+			.setName('Personal access token')
+			.setDesc(
+				'Select or create a secret in Obsidian’s keychain. The token is stored outside plugin data.json.',
+			)
+			.addComponent((el) =>
+				new SecretComponent(this.app, el)
+					.setValue(this.plugin.settings.patSecretName)
+					.onChange(async (secretName) => {
+						this.plugin.settings.patSecretName =
+							secretName?.trim() || DEFAULT_SETTINGS.patSecretName;
+						await this.plugin.saveSettings();
+					}),
+			);
 
-			new Setting(containerEl)
-				.setName('Test token')
-				.setDesc('Verify that the selected secret can access GitHub.')
-				.addButton((button) => {
-					button
-						.setButtonText('Test connection')
-						.setCta()
-						.onClick(async () => {
-							button.setDisabled(true);
-							try {
-								const token = getPatFromSecretStorage(
-									this.app,
-									this.plugin.settings.patSecretName,
-								);
-								if (!token) {
-									new Notice(
-										'No token found for the selected secret name.',
-									);
-									return;
-								}
-
-								const user = await fetchAuthenticatedUser(token);
+		new Setting(containerEl)
+			.setName('Test token')
+			.setDesc('Verify that the selected secret can access GitHub.')
+			.addButton((button) => {
+				button
+					.setButtonText('Test connection')
+					.setCta()
+					.onClick(async () => {
+						button.setDisabled(true);
+						try {
+							const token = getPatFromSecretStorage(
+								this.app,
+								this.plugin.settings.patSecretName,
+							);
+							if (!token) {
 								new Notice(
-									`Connected to GitHub as ${user.login}.`,
+									'No token found for the selected secret name.',
 								);
-							} catch (error) {
-								new Notice(classifyGithubError(error), 8000);
-							} finally {
-								button.setDisabled(false);
+								return;
 							}
-						});
-				});
-		} else {
-			new Setting(containerEl)
-				.setName('Personal access token')
-				.setDesc(
-					'Secret storage requires Obsidian 1.11.4 or later. Upgrade Obsidian to store your token securely.',
-				);
-		}
+
+							const user = await fetchAuthenticatedUser(token);
+							new Notice(
+								`Connected to GitHub as ${user.login}.`,
+							);
+						} catch (error) {
+							new Notice(classifyGithubError(error), 8000);
+						} finally {
+							button.setDisabled(false);
+						}
+					});
+			});
 
 		new Setting(containerEl)
 			.setName('Note output')
@@ -164,7 +156,7 @@ export class GithubStarsSyncSettingTab extends PluginSettingTab {
 		for (const variable of TEMPLATE_VARIABLES) {
 			const item = listEl.createEl('li');
 			item.createEl('code', { text: `{{${variable.name}}}` });
-			item.appendText(` — ${variable.description}`);
+			item.appendText(`: ${variable.description}`);
 		}
 
 		new Setting(containerEl)
@@ -253,7 +245,7 @@ export class GithubStarsSyncSettingTab extends PluginSettingTab {
 			for (const variable of MOC_TEMPLATE_VARIABLES) {
 				const item = mocListEl.createEl('li');
 				item.createEl('code', { text: `{{${variable.name}}}` });
-				item.appendText(` — ${variable.description}`);
+				item.appendText(`: ${variable.description}`);
 			}
 		}
 
@@ -321,6 +313,8 @@ export class GithubStarsSyncSettingTab extends PluginSettingTab {
 						await this.plugin.runSync({ showNotice: true });
 					} finally {
 						button.setDisabled(false);
+						// Re-render so Last sync and Last sync error reflect this run.
+						this.display();
 					}
 				}),
 			);

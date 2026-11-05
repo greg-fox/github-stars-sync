@@ -11,10 +11,3 @@ export function getPatFromSecretStorage(
 
 	return app.secretStorage.getSecret(normalizedName);
 }
-
-export function hasSecretStorage(app: App): boolean {
-	return Boolean(
-		app.secretStorage &&
-			typeof app.secretStorage.getSecret === 'function',
-	);
-}

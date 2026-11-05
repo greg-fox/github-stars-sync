@@ -4,6 +4,7 @@
 	"version": "1.0.0",
 	"minAppVersion": "1.11.4",
 	"description": "Synchronize GitHub starred repositories to Obsidian notes with customizable templates.",
-	"author": "",
+	"author": "Greg Fox",
+	"authorUrl": "https://gf-tech.com",
 	"isDesktopOnly": false
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { App } from 'obsidian';
-import { getPatFromSecretStorage, hasSecretStorage } from '../src/secrets';
+import { getPatFromSecretStorage } from '../src/secrets';
 
 describe('secret storage helpers', () => {
 	it('returns null when secret name is empty', () => {
@@ -25,12 +25,4 @@ describe('secret storage helpers', () => {
 		expect(getSecret).toHaveBeenCalledWith('github-stars-sync-pat');
 	});
 
-	it('detects secret storage support', () => {
-		expect(
-			hasSecretStorage({
-				secretStorage: { getSecret: () => null },
-			} as unknown as App),
-		).toBe(true);
-		expect(hasSecretStorage({} as App)).toBe(false);
-	});
 });

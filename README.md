@@ -77,6 +77,8 @@ Click **Test connection** to verify the token works.
 | **Note template** | Full markdown template for each note |
 | **Update existing notes** | Re-render notes from the template on each sync (off by default to preserve manual edits) |
 
+The plugin only writes to notes it created, or to existing notes whose frontmatter identifies the same repository (`github_id`, `id`, or `url`). If another note already uses the rendered filename, or two repositories render to the same filename, the new note is saved as `<filename>-<repository id>.md` instead of overwriting anything. The default template includes `github_id: {{id}}` for this purpose.
+
 ### Synchronization
 
 | Setting | Description |

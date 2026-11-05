@@ -1,4 +1,10 @@
-import { normalizePath, TFile, TFolder, Vault } from 'obsidian';
+import {
+	normalizePath,
+	TFile,
+	TFolder,
+	type MetadataCache,
+	Vault,
+} from 'obsidian';
 import type { GithubRepository, SyncResult } from '../types';
 import { renderFilename, renderTemplate } from '../template/engine';
 import type { GithubStarsSyncSettings } from '../settings';
@@ -62,12 +68,61 @@ function findExistingFolderPath(vault: Vault, path: string): string | null {
 	return match ? match.path : null;
 }
 
+export interface WriteRepositoryNotesOptions {
+	/**
+	 * Used to read frontmatter of a file that already exists at a note's
+	 * target path, so the plugin only adopts files that belong to the same
+	 * repository. Without it, unmapped existing files are never adopted.
+	 */
+	metadataCache?: MetadataCache;
+}
+
+function pathKey(path: string): string {
+	// Vaults commonly live on case-insensitive file systems.
+	return path.toLowerCase();
+}
+
+/**
+ * Returns true when an existing, unmapped file appears to be the note for
+ * `repository`, based on identifiers in its frontmatter.
+ */
+function fileBelongsToRepository(
+	file: TFile,
+	repository: GithubRepository,
+	metadataCache: MetadataCache | undefined,
+): boolean {
+	const frontmatter: Record<string, unknown> | undefined =
+		metadataCache?.getFileCache(file)?.frontmatter;
+	if (!frontmatter) {
+		return false;
+	}
+
+	const repoId = String(repository.id);
+	for (const key of ['github_id', 'id']) {
+		const value = frontmatter[key];
+		if (
+			(typeof value === 'number' || typeof value === 'string') &&
+			String(value).trim() === repoId
+		) {
+			return true;
+		}
+	}
+
+	const url = frontmatter.url;
+	return (
+		typeof url === 'string' &&
+		Boolean(repository.html_url) &&
+		url.trim().toLowerCase() === repository.html_url.toLowerCase()
+	);
+}
+
 export async function writeRepositoryNotes(
 	vault: Vault,
 	settings: GithubStarsSyncSettings,
 	repositories: GithubRepository[],
 	repoNotes: Record<string, string>,
 	updateExistingNotes: boolean,
+	options: WriteRepositoryNotesOptions = {},
 ): Promise<{ result: SyncResult; repoNotes: Record<string, string> }> {
 	const result: SyncResult = {
 		created: 0,
@@ -82,6 +137,42 @@ export async function writeRepositoryNotes(
 	const nextRepoNotes = { ...repoNotes };
 	const notesFolder = await ensureFolderExists(vault, settings.notesFolder);
 
+	// Paths already owned by a repository. A repository may only write to a
+	// path it owns, so two repositories can never share (and overwrite) the
+	// same note, and notes the plugin did not create are left untouched.
+	const owners = new Map<string, string>();
+	for (const [repoKey, path] of Object.entries(repoNotes)) {
+		const key = pathKey(path);
+		if (!owners.has(key) && vault.getAbstractFileByPath(path) instanceof TFile) {
+			owners.set(key, repoKey);
+		}
+	}
+
+	const isFreeFor = (path: string, repoKey: string): boolean => {
+		const owner = owners.get(pathKey(path));
+		return owner === undefined || owner === repoKey;
+	};
+
+	const claim = (path: string, repoKey: string): void => {
+		owners.set(pathKey(path), repoKey);
+		nextRepoNotes[repoKey] = path;
+	};
+
+	const writeExisting = async (
+		file: TFile,
+		repoKey: string,
+		content: string,
+	): Promise<void> => {
+		claim(file.path, repoKey);
+		if (!updateExistingNotes) {
+			result.skipped++;
+			return;
+		}
+
+		await vault.modify(file, content);
+		result.updated++;
+	};
+
 	for (const repository of repositories) {
 		const repoKey = String(repository.id);
 
@@ -90,33 +181,63 @@ export async function writeRepositoryNotes(
 				settings.filenameTemplate,
 				repository,
 			);
-			const filePath = normalizePath(
-				`${notesFolder}/${filename}.md`,
-			);
 			const content = renderTemplate(settings.noteTemplate, repository, {
 				linkStarNamesToMoc: settings.mocEnabled && settings.mocLinkStarNames,
 			});
-			const existingPath = nextRepoNotes[repoKey];
-			const existingFile = existingPath
-				? vault.getAbstractFileByPath(existingPath)
-				: vault.getAbstractFileByPath(filePath);
 
-			if (existingFile instanceof TFile) {
-				if (!updateExistingNotes) {
-					result.skipped++;
-					nextRepoNotes[repoKey] = existingFile.path;
-					continue;
-				}
-
-				await vault.modify(existingFile, content);
-				nextRepoNotes[repoKey] = existingFile.path;
-				result.updated++;
+			const mappedPath = nextRepoNotes[repoKey];
+			const mappedFile = mappedPath
+				? vault.getAbstractFileByPath(mappedPath)
+				: null;
+			if (mappedFile instanceof TFile && isFreeFor(mappedFile.path, repoKey)) {
+				await writeExisting(mappedFile, repoKey, content);
 				continue;
 			}
 
-			const createdFile = await vault.create(filePath, content);
-			nextRepoNotes[repoKey] = createdFile.path;
-			result.created++;
+			// Try the rendered filename first, then a variant suffixed with the
+			// stable repository ID if the first is taken by something else.
+			const candidates = [
+				normalizePath(`${notesFolder}/${filename}.md`),
+				normalizePath(`${notesFolder}/${filename}-${repoKey}.md`),
+			];
+
+			let handled = false;
+			for (const candidate of candidates) {
+				if (!isFreeFor(candidate, repoKey)) {
+					continue;
+				}
+
+				const existing = vault.getAbstractFileByPath(candidate);
+				if (existing instanceof TFile) {
+					if (
+						fileBelongsToRepository(
+							existing,
+							repository,
+							options.metadataCache,
+						)
+					) {
+						await writeExisting(existing, repoKey, content);
+						handled = true;
+						break;
+					}
+					continue;
+				}
+				if (existing) {
+					continue;
+				}
+
+				const createdFile = await vault.create(candidate, content);
+				claim(createdFile.path, repoKey);
+				result.created++;
+				handled = true;
+				break;
+			}
+
+			if (!handled) {
+				throw new Error(
+					`"${candidates[0]}" already exists and belongs to another note.`,
+				);
+			}
 		} catch (error) {
 			const message =
 				error instanceof Error ? error.message : 'Unknown write error';

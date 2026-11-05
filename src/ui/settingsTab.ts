@@ -292,7 +292,7 @@ export class GithubStarsSyncSettingTab extends PluginSettingTab {
 							this.plugin.settings.syncIntervalHours =
 								normalizeSyncIntervalHours(parsed);
 							await this.plugin.saveSettings();
-							this.plugin.refreshSyncInterval();
+							this.plugin.scheduleSyncIntervalRefresh();
 						});
 				});
 		}

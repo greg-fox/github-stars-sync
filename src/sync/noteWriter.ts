@@ -38,12 +38,13 @@ export async function ensureFolderExists(
 		// Vault.createFolder throws "Folder already exists." when the folder
 		// is on disk but the vault index does not have it at this exact path
 		// (case mismatch, external creation, index not yet refreshed). Re-check
-		// the vault and the underlying adapter before treating it as a failure.
+		// the vault index, then trust the error message rather than querying
+		// the adapter, so only the Vault API is used.
 		const resolved = findExistingFolderPath(vault, normalizedPath);
 		if (resolved !== null) {
 			return resolved;
 		}
-		if (await vault.adapter.exists(normalizedPath)) {
+		if (error instanceof Error && /already exists/i.test(error.message)) {
 			return normalizedPath;
 		}
 		throw error;

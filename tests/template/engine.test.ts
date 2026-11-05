@@ -64,7 +64,7 @@ describe('renderTemplate', () => {
 			},
 		);
 
-		expect(rendered).toContain('- Obsidian');
+		expect(rendered).toContain('- "Obsidian"');
 		expect(rendered).toContain(
 			'https://github.com/stars/octocat/lists/obsidian',
 		);
@@ -73,8 +73,8 @@ describe('renderTemplate', () => {
 
 	it('formats topics as YAML', () => {
 		const rendered = renderTemplate('topics: {{topics}}', sampleRepository);
-		expect(rendered).toContain('- obsidian');
-		expect(rendered).toContain('- plugin');
+		expect(rendered).toContain('- "obsidian"');
+		expect(rendered).toContain('- "plugin"');
 	});
 
 	it('wraps star names in wikilinks when MOC linking is enabled', () => {

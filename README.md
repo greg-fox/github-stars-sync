@@ -110,6 +110,7 @@ Use these placeholders in the filename and note templates:
 | `{{full_name}}` | `owner/repo` |
 | `{{owner}}` | Owner login |
 | `{{description}}` | Repository description |
+| `{{description_yaml}}` | Repository description as a quoted, escaped YAML string. Use it in frontmatter without surrounding quotes, for example `description: {{description_yaml}}` |
 | `{{language}}` | Primary language |
 | `{{url}}` | GitHub URL |
 | `{{id}}` | Repository ID |
@@ -130,6 +131,8 @@ Use these placeholders in the filename and note templates:
 | `{{is_fork}}` | `true` or `false` |
 | `{{topics}}` | YAML list of topics |
 | `{{topics_inline}}` | Comma-separated topics |
+
+YAML list variables (`{{topics}}`, `{{star_names}}`, `{{star_links}}`) quote every item, so values such as `2024` or `true` stay strings in frontmatter.
 
 Star list links use GitHub’s public list URLs, for example `https://github.com/stars/<username>/lists/<slug>`.
 

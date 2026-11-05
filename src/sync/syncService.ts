@@ -49,7 +49,9 @@ export async function syncGithubStars(
 				membership,
 			);
 		} catch (error) {
-			const message = classifyGithubError(error);
+			// Classified messages are full sentences; drop the trailing period
+			// so it does not double up with the sentence below.
+			const message = classifyGithubError(error).replace(/\.+$/, '');
 			warnings.push(
 				`Star list metadata was not synced: ${message}. Notes were still created from starred repositories.`,
 			);

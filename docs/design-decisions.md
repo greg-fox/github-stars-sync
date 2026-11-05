@@ -80,7 +80,9 @@ Star lists are deduplicated by `slug` (GitHub's stable per-list identifier) acro
 
 ### Filenames and linking
 
-A MOC note's filename is the sanitized star list **name** (not slug), written to a separate configurable destination folder (default `GitHub Stars/MOCs`). Using the plain name as the filename means `[[Star List Name]]` wikilinks resolve correctly regardless of which folder the MOC note lives in, matching how Obsidian resolves wikilinks by filename rather than full path.
+A MOC note's filename is the sanitized star list **name** (not slug), written to a separate configurable destination folder (default `GitHub Stars/MOCs`). Sanitizing replaces characters that are invalid in file names or that break wikilinks (`< > : " / \ | ? * # ^ [ ]` and control characters), strips leading dots and trailing dots or spaces, and falls back to the list slug when nothing usable remains.
+
+Because the filename can differ from the list name (for example `AI/ML` is saved as `AI-ML.md`), links to MOC notes use the full vault path rather than the bare name. This also keeps links from resolving to an unrelated note that happens to share the list name.
 
 ### Create-only, never overwrite
 
@@ -88,7 +90,7 @@ Sync only creates MOC notes that do not already exist. Unlike repository notes (
 
 ### Linking repository notes to MOCs
 
-The existing `{{star_names}}` and `{{star_names_inline}}` template variables are reused rather than adding new ones. When **Link star names to maps of content** is enabled, each star name is wrapped as `[[name]]` before being formatted into the YAML list / inline string. `{{star_lists_markdown}}` (which links out to GitHub) is intentionally left unchanged, since it serves a different purpose (an external reference, not a vault-internal MOC link).
+The existing `{{star_names}}` and `{{star_names_inline}}` template variables are reused rather than adding new ones. When **Link star names to maps of content** is enabled, each star name is replaced with a path link to its MOC note, using the list name as the alias (`[[GitHub Stars/MOCs/AI-ML|AI/ML]]`), before being formatted into the YAML list / inline string. Characters that would break the link are removed from the alias. `{{star_lists_markdown}}` (which links out to GitHub) is intentionally left unchanged, since it serves a different purpose (an external reference, not a vault-internal MOC link).
 
 ## 2026-11-05: Deleted notes are recreated (known issue)
 

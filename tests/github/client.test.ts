@@ -193,4 +193,48 @@ describe('GitHub error handling', () => {
 		expect(error).toBeInstanceOf(GithubApiError);
 		expect((error as GithubApiError).status).toBe(401);
 	});
+
+	it('treats GraphQL RATE_LIMITED errors as rate limiting', async () => {
+		vi.mocked(requestUrl).mockResolvedValueOnce({
+			status: 200,
+			json: {
+				errors: [
+					{ type: 'RATE_LIMITED', message: 'API rate limit exceeded for user.' },
+				],
+			},
+			headers: {},
+		} as never);
+
+		const error = await graphqlRequest('ghp_test', 'query { viewer { login } }').catch(
+			(caught: unknown) => caught,
+		);
+
+		expect(error).toBeInstanceOf(GithubApiError);
+		expect((error as GithubApiError).rateLimited).toBe(true);
+		expect(classifyGithubError(error)).toBe(
+			'GitHub rate limit exceeded. Try again later.',
+		);
+	});
+
+	it('keeps other GraphQL errors as plain errors with their messages', async () => {
+		vi.mocked(requestUrl).mockResolvedValueOnce({
+			status: 200,
+			json: {
+				errors: [
+					{ type: 'FORBIDDEN', message: 'Resource not accessible' },
+					{ message: 'Second problem' },
+				],
+			},
+			headers: {},
+		} as never);
+
+		const error = await graphqlRequest('ghp_test', 'query { viewer { login } }').catch(
+			(caught: unknown) => caught,
+		);
+
+		expect(error).not.toBeInstanceOf(GithubApiError);
+		expect(classifyGithubError(error)).toBe(
+			'Resource not accessible; Second problem',
+		);
+	});
 });

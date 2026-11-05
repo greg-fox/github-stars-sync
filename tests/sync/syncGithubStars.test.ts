@@ -142,4 +142,40 @@ describe('syncGithubStars', () => {
 			expect.stringContaining('Obsidian'),
 		);
 	});
+
+	it('reports star list failures in a single well-formed sentence', async () => {
+		const app = {
+			secretStorage: {
+				getSecret: vi.fn().mockReturnValue('ghp_test'),
+			},
+			vault: {
+				getAbstractFileByPath: vi.fn().mockReturnValue(null),
+				getAllLoadedFiles: vi.fn(() => []),
+				createFolder: vi.fn(async () => undefined),
+				create: vi.fn(async (path: string) => ({ path })),
+				modify: vi.fn(),
+			},
+		} as unknown as App;
+
+		const { fetchStarListMembership } = await import(
+			'../../src/github/starLists'
+		);
+		vi.mocked(fetchStarListMembership).mockRejectedValueOnce(
+			new Error('Authentication failed. Check your personal access token.'),
+		);
+
+		const outcome = await syncGithubStars(app, {
+			settings: DEFAULT_SETTINGS,
+			syncState: {
+				lastSyncTime: null,
+				lastSyncError: null,
+				repoNotes: {},
+			},
+		});
+
+		expect(outcome.result.created).toBe(1);
+		expect(outcome.result.warnings).toEqual([
+			'Star list metadata was not synced: Authentication failed. Check your personal access token. Notes were still created from starred repositories.',
+		]);
+	});
 });

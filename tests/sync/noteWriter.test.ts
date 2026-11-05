@@ -341,6 +341,60 @@ describe('writeRepositoryNotes ownership', () => {
 	});
 });
 
+describe('writeRepositoryNotes rendering options', () => {
+	it('links star names to MOC notes in the configured MOC folder', async () => {
+		const { vault, created } = createStatefulVault({});
+
+		await writeRepositoryNotes(
+			vault,
+			{
+				...DEFAULT_SETTINGS,
+				noteTemplate: '{{star_names_inline}}',
+				mocEnabled: true,
+				mocLinkStarNames: true,
+				mocDestinationFolder: 'Lists/MOCs',
+			},
+			[
+				{
+					...sampleRepository,
+					starLists: [
+						{ name: 'AI/ML', slug: 'ai-ml', url: 'https://example.com/ai-ml' },
+					],
+				},
+			],
+			{},
+			false,
+		);
+
+		expect(created[0]?.content).toBe('[[Lists/MOCs/AI-ML|AI/ML]]');
+	});
+
+	it('treats paths that differ only by case as the same note', async () => {
+		const other: GithubRepository = {
+			...sampleRepository,
+			id: 100,
+			full_name: 'Owner/Demo',
+			owner: { login: 'Owner' },
+			name: 'Demo',
+		};
+		const { vault, created } = createStatefulVault({
+			'GitHub Stars/owner-demo.md': null,
+		});
+
+		await writeRepositoryNotes(
+			vault,
+			{ ...DEFAULT_SETTINGS, noteTemplate: '{{full_name}}' },
+			[other],
+			{ '99': 'GitHub Stars/owner-demo.md' },
+			true,
+		);
+
+		expect(created.map((entry) => entry.path)).toEqual([
+			'GitHub Stars/Owner-Demo-100.md',
+		]);
+	});
+});
+
 describe('ensureFolderExists', () => {
 	function folderAt(path: string): TFolder {
 		const folder = new TFolder();

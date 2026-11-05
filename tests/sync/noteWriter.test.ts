@@ -594,3 +594,38 @@ describe('writeRepositoryNotes relocated notes', () => {
 		]);
 	});
 });
+
+describe('writeRepositoryNotes MOC links', () => {
+	it('links to the MOC folder using its real casing', async () => {
+		const mocFolderNode = Object.assign(new TFolder(), {
+			path: 'Clippings/github-stars-mocs',
+		});
+		const { vault, created } = createStatefulVault({});
+		vi.mocked(vault.getAllLoadedFiles).mockReturnValue([mocFolderNode]);
+
+		await writeRepositoryNotes(
+			vault,
+			{
+				...DEFAULT_SETTINGS,
+				noteTemplate: '{{star_mocs_markdown}}',
+				mocEnabled: true,
+				mocDestinationFolder: 'clippings/github-stars-mocs',
+			},
+			[
+				{
+					...sampleRepository,
+					starLists: [
+						{ name: 'Software', slug: 'software', url: 'https://example.com/s' },
+					],
+				},
+			],
+			{},
+			false,
+		);
+
+		expect(created[0]?.content).toBe(
+			'- [[Clippings/github-stars-mocs/Software|Software]]',
+		);
+	});
+});
+

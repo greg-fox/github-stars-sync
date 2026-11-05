@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { TFile } from 'obsidian';
+import { TFile, TFolder } from 'obsidian';
 import type { Vault } from 'obsidian';
 import { DEFAULT_SETTINGS } from '../../src/settings';
 import type { StarListEntry } from '../../src/types';
@@ -104,3 +104,25 @@ describe('writeStarListMocs', () => {
 		expect(createdPaths).toHaveLength(0);
 	});
 });
+
+describe('writeStarListMocs notes folder', () => {
+	it('passes the notes folder, with its real casing, to the MOC template', async () => {
+		const { vault, createdContents } = createVaultMock();
+		vi.mocked(vault.getAllLoadedFiles).mockReturnValue([
+			Object.assign(new TFolder(), { path: 'Clippings/github-stars' }),
+		]);
+
+		await writeStarListMocs(
+			vault,
+			{
+				...DEFAULT_SETTINGS,
+				notesFolder: 'clippings/github-stars',
+				mocTemplate: '{{notes_folder}}',
+			},
+			[obsidianList],
+		);
+
+		expect(createdContents).toEqual(['Clippings/github-stars']);
+	});
+});
+

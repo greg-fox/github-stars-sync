@@ -2,7 +2,7 @@ import { normalizePath, TFile, Vault } from 'obsidian';
 import type { StarListEntry } from '../types';
 import { renderMocFilename, renderMocTemplate } from '../template/engine';
 import type { GithubStarsSyncSettings } from '../settings';
-import { ensureFolderExists } from './noteWriter';
+import { ensureFolderExists, resolveFolderPath } from './noteWriter';
 
 export interface MocWriteResult {
 	created: number;
@@ -42,6 +42,8 @@ export async function writeStarListMocs(
 		settings.mocDestinationFolder,
 	);
 
+	const notesFolder = resolveFolderPath(vault, settings.notesFolder);
+
 	for (const starList of starLists) {
 		try {
 			const filename = renderMocFilename(starList);
@@ -54,7 +56,9 @@ export async function writeStarListMocs(
 				continue;
 			}
 
-			const content = renderMocTemplate(settings.mocTemplate, starList);
+			const content = renderMocTemplate(settings.mocTemplate, starList, {
+				notesFolder,
+			});
 			await vault.create(filePath, content);
 			result.created++;
 		} catch (error) {

@@ -78,6 +78,8 @@ export interface WriteRepositoryNotesOptions {
 	 * adopted and relocated notes are not found.
 	 */
 	metadataCache?: MetadataCache;
+	/** ISO 8601 time of this sync, exposed to templates as `{{synced_at}}`. */
+	syncedAt?: string;
 }
 
 function pathKey(path: string): string {
@@ -193,6 +195,7 @@ export async function writeRepositoryNotes(
 			const content = renderTemplate(settings.noteTemplate, repository, {
 				linkStarNamesToMoc: settings.mocEnabled && settings.mocLinkStarNames,
 				mocFolder: settings.mocDestinationFolder,
+				syncedAt: options.syncedAt,
 			});
 
 			const mappedPath = nextRepoNotes[repoKey];

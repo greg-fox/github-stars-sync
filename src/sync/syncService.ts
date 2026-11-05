@@ -57,13 +57,14 @@ export async function syncGithubStars(
 			);
 		}
 
+		const syncedAt = new Date().toISOString();
 		const { result, repoNotes } = await writeRepositoryNotes(
 			app.vault,
 			options.settings,
 			enrichedRepositories,
 			syncState.repoNotes,
 			options.settings.updateExistingNotes,
-			{ metadataCache: app.metadataCache },
+			{ metadataCache: app.metadataCache, syncedAt },
 		);
 
 		let mocsCreated = 0;
@@ -93,7 +94,7 @@ export async function syncGithubStars(
 			syncState: {
 				...syncState,
 				repoNotes,
-				lastSyncTime: new Date().toISOString(),
+				lastSyncTime: syncedAt,
 				lastSyncError: errors.length > 0 ? errors[0] ?? null : null,
 			},
 		};

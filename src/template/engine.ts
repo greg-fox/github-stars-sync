@@ -22,6 +22,8 @@ export interface RenderTemplateOptions {
 	linkStarNamesToMoc?: boolean;
 	/** Vault folder that holds star list MOC notes, used to build wikilinks. */
 	mocFolder?: string;
+	/** ISO 8601 time of the sync that rendered the note. */
+	syncedAt?: string;
 }
 
 /**
@@ -76,6 +78,11 @@ export function renderTemplate(
 		starred_at: repository.starred_at ?? '',
 		is_private: repository.private ? 'true' : 'false',
 		is_fork: repository.fork ? 'true' : 'false',
+		archived: repository.archived ? 'true' : 'false',
+		homepage: repository.homepage?.trim() ?? '',
+		license: formatLicense(repository),
+		default_branch: repository.default_branch ?? '',
+		synced_at: options.syncedAt ?? '',
 		topics: formatTopicsYaml(repository.topics ?? []),
 		topics_inline: (repository.topics ?? []).join(', '),
 		star_names: formatYamlStringList(starNames),
@@ -172,4 +179,22 @@ function applyReplacements(
 			? (replacements[key] ?? match)
 			: match,
 	);
+}
+
+/**
+ * SPDX identifier for the repository license (for example `MIT`), or the
+ * license name when GitHub cannot map it to an SPDX identifier.
+ */
+function formatLicense(repository: GithubRepository): string {
+	const license = repository.license;
+	if (!license) {
+		return '';
+	}
+
+	const spdxId = license.spdx_id?.trim();
+	if (spdxId && spdxId !== 'NOASSERTION') {
+		return spdxId;
+	}
+
+	return license.name?.trim() ?? '';
 }

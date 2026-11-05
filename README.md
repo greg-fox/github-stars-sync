@@ -143,6 +143,11 @@ Use these placeholders in the filename and note templates:
 | `{{star_lists_markdown}}` | Markdown bullet links to each star list |
 | `{{is_private}}` | `true` or `false` |
 | `{{is_fork}}` | `true` or `false` |
+| `{{archived}}` | `true` or `false` |
+| `{{homepage}}` | Repository homepage URL, if set |
+| `{{license}}` | License SPDX identifier (for example `MIT`), or the license name when GitHub has no SPDX identifier |
+| `{{default_branch}}` | Default branch name |
+| `{{synced_at}}` | When a sync last wrote this note (ISO 8601). With **Update existing notes** off, this is when the note was created |
 | `{{topics}}` | YAML list of topics |
 | `{{topics_inline}}` | Comma-separated topics |
 

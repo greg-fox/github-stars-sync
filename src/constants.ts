@@ -85,6 +85,17 @@ export const TEMPLATE_VARIABLES = [
 	},
 	{ name: 'is_private', description: 'Whether the repository is private (true/false)' },
 	{ name: 'is_fork', description: 'Whether the repository is a fork (true/false)' },
+	{ name: 'archived', description: 'Whether the repository is archived (true/false)' },
+	{ name: 'homepage', description: 'Repository homepage URL, if set' },
+	{
+		name: 'license',
+		description: 'License SPDX identifier (for example MIT), or the license name',
+	},
+	{ name: 'default_branch', description: 'Default branch name' },
+	{
+		name: 'synced_at',
+		description: 'When a sync last wrote this note (ISO 8601)',
+	},
 	{ name: 'topics', description: 'Repository topics as a YAML list' },
 	{ name: 'topics_inline', description: 'Repository topics as a comma-separated string' },
 ] as const;

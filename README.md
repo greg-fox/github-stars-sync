@@ -144,6 +144,8 @@ This plugin treats GitHub as the source of truth and keeps a backup of your star
 
 To remove a repository from the vault permanently, unstar it on GitHub first, then delete the note.
 
+Renaming or moving a repository note (or its folder) is safe: the plugin follows the rename, and if a note was moved while the plugin was disabled, the next sync finds it by its `github_id` frontmatter (or by `id` or `url` inside the notes folder) instead of creating a duplicate.
+
 ## Documentation
 
 Design notes and architecture details live in the [`docs/`](docs/) folder.

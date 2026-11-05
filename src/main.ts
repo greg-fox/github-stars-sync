@@ -9,6 +9,7 @@ import {
 	syncGithubStars,
 } from './sync/syncService';
 import type { SyncState } from './types';
+import { applyRenameToRepoNotes } from './sync/noteTracking';
 
 const DEFAULT_SYNC_STATE: SyncState = {
 	lastSyncTime: null,
@@ -37,6 +38,15 @@ export default class GithubStarsSyncPlugin extends Plugin {
 		});
 
 		this.addSettingTab(new GithubStarsSyncSettingTab(this.app, this));
+
+		// Keep tracked note paths current when notes or their folders are
+		// renamed or moved, so the next sync updates them in place instead of
+		// creating duplicates.
+		this.registerEvent(
+			this.app.vault.on('rename', (file, oldPath) => {
+				void this.handleRename(file.path, oldPath);
+			}),
+		);
 		this.refreshSyncInterval();
 
 		if (this.settings.autoSync) {
@@ -93,7 +103,21 @@ export default class GithubStarsSyncPlugin extends Plugin {
 		this.registerInterval(this.activeSyncIntervalId);
 	}
 
-	async runSync(options: { showNotice: boolean }): Promise<void> {
+	private async handleRename(newPath: string, oldPath: string): Promise<void> {
+		const repoNotes = applyRenameToRepoNotes(
+			this.syncState.repoNotes,
+			oldPath,
+			newPath,
+		);
+		if (!repoNotes) {
+			return;
+		}
+
+		this.syncState = { ...this.syncState, repoNotes };
+		await this.saveSettings();
+	}
+
+		async runSync(options: { showNotice: boolean }): Promise<void> {
 		if (this.syncInProgress) {
 			if (options.showNotice) {
 				new Notice('GitHub stars sync is already running.');

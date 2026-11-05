@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TFile, TFolder } from 'obsidian';
-import type { Vault } from 'obsidian';
+import type { MetadataCache, Vault } from 'obsidian';
 import { DEFAULT_SETTINGS } from '../../src/settings';
 import type { GithubRepository } from '../../src/types';
 import { ensureFolderExists, writeRepositoryNotes } from '../../src/sync/noteWriter';
@@ -103,6 +103,241 @@ describe('writeRepositoryNotes', () => {
 
 		expect(result.updated).toBe(1);
 		expect(modified).toHaveLength(1);
+	});
+});
+
+function createStatefulVault(files: Record<string, Record<string, unknown> | null>) {
+	const byPath = new Map<string, TFile>();
+	const frontmatter = new Map<TFile, Record<string, unknown> | null>();
+	for (const [path, fm] of Object.entries(files)) {
+		const file = Object.assign(new TFile(), { path });
+		byPath.set(path, file);
+		frontmatter.set(file, fm);
+	}
+
+	const created: Array<{ path: string; content: string }> = [];
+	const modified: Array<{ path: string; content: string }> = [];
+
+	const vault = {
+		getAbstractFileByPath: vi.fn((path: string) => byPath.get(path) ?? null),
+		getAllLoadedFiles: vi.fn(() => []),
+		createFolder: vi.fn(async () => undefined),
+		create: vi.fn(async (path: string, content: string) => {
+			if (byPath.has(path)) {
+				throw new Error('File already exists.');
+			}
+			const file = Object.assign(new TFile(), { path });
+			byPath.set(path, file);
+			created.push({ path, content });
+			return file;
+		}),
+		modify: vi.fn(async (file: TFile, content: string) => {
+			modified.push({ path: file.path, content });
+		}),
+	} as unknown as Vault;
+
+	const metadataCache = {
+		getFileCache: vi.fn((file: TFile) => {
+			const fm = frontmatter.get(file);
+			return fm ? { frontmatter: fm } : null;
+		}),
+	} as unknown as MetadataCache;
+
+	return { vault, metadataCache, created, modified };
+}
+
+describe('writeRepositoryNotes ownership', () => {
+	const settings = {
+		...DEFAULT_SETTINGS,
+		noteTemplate: '{{full_name}}',
+	};
+
+	it('does not overwrite an unrelated note at the target path', async () => {
+		const { vault, metadataCache, created, modified } = createStatefulVault({
+			'GitHub Stars/owner-demo.md': { title: 'My own note' },
+		});
+
+		const { result, repoNotes } = await writeRepositoryNotes(
+			vault,
+			settings,
+			[sampleRepository],
+			{},
+			true,
+			{ metadataCache },
+		);
+
+		expect(modified).toHaveLength(0);
+		expect(created).toEqual([
+			{ path: 'GitHub Stars/owner-demo-99.md', content: 'owner/demo' },
+		]);
+		expect(result.created).toBe(1);
+		expect(repoNotes['99']).toBe('GitHub Stars/owner-demo-99.md');
+	});
+
+	it('does not adopt an unmapped note when no metadata cache is available', async () => {
+		const { vault, created, modified } = createStatefulVault({
+			'GitHub Stars/owner-demo.md': { github_id: 99 },
+		});
+
+		await writeRepositoryNotes(vault, settings, [sampleRepository], {}, true);
+
+		expect(modified).toHaveLength(0);
+		expect(created.map((entry) => entry.path)).toEqual([
+			'GitHub Stars/owner-demo-99.md',
+		]);
+	});
+
+	it.each([
+		['github_id', { github_id: 99 }],
+		['id', { id: '99' }],
+		['url', { url: 'https://github.com/owner/demo' }],
+	])('adopts an unmapped note whose frontmatter %s matches', async (_label, fm) => {
+		const { vault, metadataCache, created, modified } = createStatefulVault({
+			'GitHub Stars/owner-demo.md': fm,
+		});
+
+		const { result, repoNotes } = await writeRepositoryNotes(
+			vault,
+			settings,
+			[sampleRepository],
+			{},
+			true,
+			{ metadataCache },
+		);
+
+		expect(created).toHaveLength(0);
+		expect(modified).toEqual([
+			{ path: 'GitHub Stars/owner-demo.md', content: 'owner/demo' },
+		]);
+		expect(result.updated).toBe(1);
+		expect(repoNotes['99']).toBe('GitHub Stars/owner-demo.md');
+	});
+
+	it('gives repositories whose filenames collide separate notes', async () => {
+		const first: GithubRepository = {
+			...sampleRepository,
+			id: 1,
+			name: 'c',
+			full_name: 'a-b/c',
+			owner: { login: 'a-b' },
+			html_url: 'https://github.com/a-b/c',
+		};
+		const second: GithubRepository = {
+			...sampleRepository,
+			id: 2,
+			name: 'b-c',
+			full_name: 'a/b-c',
+			owner: { login: 'a' },
+			html_url: 'https://github.com/a/b-c',
+		};
+		const { vault, metadataCache, created, modified } = createStatefulVault({});
+
+		const { repoNotes } = await writeRepositoryNotes(
+			vault,
+			settings,
+			[first, second],
+			{},
+			true,
+			{ metadataCache },
+		);
+
+		expect(modified).toHaveLength(0);
+		expect(created).toEqual([
+			{ path: 'GitHub Stars/a-b-c.md', content: 'a-b/c' },
+			{ path: 'GitHub Stars/a-b-c-2.md', content: 'a/b-c' },
+		]);
+		expect(repoNotes).toEqual({
+			'1': 'GitHub Stars/a-b-c.md',
+			'2': 'GitHub Stars/a-b-c-2.md',
+		});
+	});
+
+	it('keeps colliding repositories separate on later syncs', async () => {
+		const first: GithubRepository = {
+			...sampleRepository,
+			id: 1,
+			name: 'c',
+			full_name: 'a-b/c',
+			owner: { login: 'a-b' },
+		};
+		const second: GithubRepository = {
+			...sampleRepository,
+			id: 2,
+			name: 'b-c',
+			full_name: 'a/b-c',
+			owner: { login: 'a' },
+		};
+		const { vault, metadataCache, created, modified } = createStatefulVault({
+			'GitHub Stars/a-b-c.md': null,
+			'GitHub Stars/a-b-c-2.md': null,
+		});
+
+		await writeRepositoryNotes(
+			vault,
+			settings,
+			[second, first],
+			{ '1': 'GitHub Stars/a-b-c.md', '2': 'GitHub Stars/a-b-c-2.md' },
+			true,
+			{ metadataCache },
+		);
+
+		expect(created).toHaveLength(0);
+		expect(modified).toEqual([
+			{ path: 'GitHub Stars/a-b-c-2.md', content: 'a/b-c' },
+			{ path: 'GitHub Stars/a-b-c.md', content: 'a-b/c' },
+		]);
+	});
+
+	it('splits two repositories previously mapped to the same note', async () => {
+		const other: GithubRepository = {
+			...sampleRepository,
+			id: 100,
+			full_name: 'owner/demo-other',
+		};
+		const { vault, metadataCache, created, modified } = createStatefulVault({
+			'GitHub Stars/owner-demo.md': null,
+		});
+
+		const { repoNotes } = await writeRepositoryNotes(
+			vault,
+			settings,
+			[sampleRepository, other],
+			{
+				'99': 'GitHub Stars/owner-demo.md',
+				'100': 'GitHub Stars/owner-demo.md',
+			},
+			true,
+			{ metadataCache },
+		);
+
+		expect(modified).toEqual([
+			{ path: 'GitHub Stars/owner-demo.md', content: 'owner/demo' },
+		]);
+		expect(created).toEqual([
+			{ path: 'GitHub Stars/owner-demo-100.md', content: 'owner/demo-other' },
+		]);
+		expect(repoNotes['100']).toBe('GitHub Stars/owner-demo-100.md');
+	});
+
+	it('reports an error when every candidate path belongs to other notes', async () => {
+		const { vault, metadataCache, created, modified } = createStatefulVault({
+			'GitHub Stars/owner-demo.md': null,
+			'GitHub Stars/owner-demo-99.md': null,
+		});
+
+		const { result } = await writeRepositoryNotes(
+			vault,
+			settings,
+			[sampleRepository],
+			{},
+			true,
+			{ metadataCache },
+		);
+
+		expect(created).toHaveLength(0);
+		expect(modified).toHaveLength(0);
+		expect(result.errors).toHaveLength(1);
+		expect(result.errors[0]).toContain('owner/demo');
 	});
 });
 

@@ -64,6 +64,7 @@ export async function syncGithubStars(
 			enrichedRepositories,
 			syncState.repoNotes,
 			options.settings.updateExistingNotes,
+			{ metadataCache: app.metadataCache },
 		);
 
 		let mocsCreated = 0;

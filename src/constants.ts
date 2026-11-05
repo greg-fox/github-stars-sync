@@ -10,6 +10,7 @@ export const MAX_SYNC_INTERVAL_HOURS = 168;
 
 export const DEFAULT_NOTE_TEMPLATE = `---
 title: "{{full_name}}"
+github_id: {{id}}
 url: "{{url}}"
 owner: "{{owner}}"
 language: "{{language}}"
